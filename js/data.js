@@ -42,6 +42,7 @@ Best regards`;
             hint: 'Mira “important”. Para hablar de lo que afecta tu nota, ¿hay una palabra más precisa?',
             why: '“Relevant” expresa que el plazo es pertinente para tu evaluación; “important” es más general.',
             example: 'This deadline is relevant for my final grade.',
+            alt: '“Pertinent” o “significant” también funcionan. “Important” no es incorrecto: solo es menos preciso aquí.',
             ruleId: 'r2',
             control: 'comunicación',
             risk: 'validez ecológica',
@@ -59,6 +60,7 @@ Best regards`;
             hint: 'Mira “I want you give me more time”. Para escribirle a una profesora, ¿suena lo bastante formal?',
             why: '“Could you please…?” es una petición cortés y adecuada para el contexto académico.',
             example: 'Could you please give me more time to submit the essay?',
+            alt: 'Una opción algo menos formal pero aceptable: “Would it be possible to have more time?”.',
             ruleId: 'r3',
             control: 'colaboración',
             risk: 'decepción',
@@ -160,15 +162,14 @@ Best regards`;
         { id: 's1', title: 'Correo: prórroga', device: 'monitor', meta: 'Hoy 19:40', mode: 'writing', active: true },
         { id: 's2', title: 'Conversación: entrevista', device: 'phone', meta: 'Ayer 18:05', mode: 'conversation', active: false },
         { id: 's3', title: 'Artículo: vocabulario', device: 'monitor', meta: 'Lun 12:30', mode: 'lessons', active: false },
-        { id: 's4', title: 'Reseña de una serie', device: 'monitor', meta: '28 oct', mode: 'writing', active: false },
-        { id: 's5', title: 'Guion de exposición', device: 'phone', meta: '26 oct', mode: 'writing', active: false }
+        { id: 's4', title: 'Presentación formal', device: 'monitor', meta: '26 oct', mode: 'conversation', scenario: 'presentation', active: false }
     ];
 
     /* ---------- Modos ---------- */
     const modes = {
         writing: {
-            label: 'Redacción asistida',
-            title: 'Redacción asistida',
+            label: 'Revisión de correo',
+            title: 'Revisión de un correo formal',
             subtitle: 'Correo · solicitud de prórroga',
             stages: ['Planificar', 'Borrador', 'Revisar', 'Cerrar'],
             activeStage: 2,
@@ -181,39 +182,39 @@ Best regards`;
                 { id: 'changes', label: 'Cambios', paper: 'WaitGPT · granular' }
             ],
             placeholder: 'Pregunta algo sobre tu correo o pide una pista…',
-            modeHint: 'Modo: Redacción asistida'
+            modeHint: 'Modo: Revisión de correo'
         },
         conversation: {
-            label: 'Conversación',
-            title: 'Simulación de conversación',
+            label: 'Práctica de conversación',
+            title: 'Práctica de conversación escrita',
             subtitle: 'Entrevista de trabajo · inglés B1–B2',
             stages: ['Preparar', 'Hablar', 'Analizar', 'Repetir'],
             activeStage: 1,
             tabs: [
+                { id: 'vocabulary', label: 'Palabras clave', paper: 'LightVA · insights' },
                 { id: 'scenario', label: 'Escenario', paper: 'Gu et al. · contexto' },
-                { id: 'vocabulary', label: 'Vocabulario', paper: 'LightVA · insights' },
                 { id: 'progress', label: 'Progreso', paper: 'WoZ · rigor' },
                 { id: 'path', label: 'Ruta', paper: 'LightVA · task flow' },
                 { id: 'changes', label: 'Cambios', paper: 'WaitGPT · granular' }
             ],
-            placeholder: 'Responde a la entrevistadora o pide una pista…',
-            modeHint: 'Modo: Conversación'
+            placeholder: 'Escribe tu respuesta en inglés o pide una pista…',
+            modeHint: 'Modo: Práctica de conversación'
         },
         lessons: {
-            label: 'Lecciones y repaso',
-            title: 'Lecciones y repaso',
+            label: 'Vocabulario en contexto',
+            title: 'Vocabulario en contexto desde un artículo',
             subtitle: 'Artículo corto · vocabulario en contexto',
             stages: ['Leer', 'Descubrir', 'Registrar', 'Practicar'],
             activeStage: 1,
             tabs: [
+                { id: 'vocabulary', label: 'Tus palabras', paper: 'Kazemitabaar · side query' },
                 { id: 'article', label: 'Artículo', paper: 'LightVA · data lens' },
-                { id: 'vocabulary', label: 'Vocabulario', paper: 'Kazemitabaar · side query' },
                 { id: 'progress', label: 'Progreso', paper: 'WoZ · rigor' },
                 { id: 'plan', label: 'Plan', paper: 'LightVA · plan' },
                 { id: 'changes', label: 'Cambios', paper: 'WaitGPT · granular' }
             ],
             placeholder: 'Pega tu lectura y escribe la palabra que necesitas…',
-            modeHint: 'Modo: Lecciones y repaso'
+            modeHint: 'Modo: Vocabulario en contexto'
         },
         questions: {
             label: 'Dudas rápidas',
@@ -222,7 +223,7 @@ Best regards`;
             stages: ['Preguntar', 'Explorar', 'Aplicar', 'Cerrar'],
             activeStage: 0,
             tabs: [
-                { id: 'answers', label: 'Respuestas', paper: 'Gu et al. · workflow' },
+                { id: 'answers', label: 'Tus dudas', paper: 'Gu et al. · workflow' },
                 { id: 'sources', label: 'Fuentes', paper: 'WoZ · rigor' },
                 { id: 'progress', label: 'Progreso', paper: 'LightVA · insights' },
                 { id: 'plan', label: 'Plan', paper: 'LightVA · plan' },
@@ -255,18 +256,18 @@ Best regards`;
         conversation: [
             {
                 role: 'ai',
-                label: 'INTERVIEWER IA · SPEAKING',
+                label: 'ENTREVISTADORA IA · CONVERSACIÓN',
                 text: 'Good morning! Thanks for coming. To start, could you tell me a little about yourself and why you are interested in this position?',
                 chips: [
                     { icon: 'lightbulb', text: 'Pista: usa “I have experience in…”', kind: 'info' },
-                    { icon: 'mic', text: 'Puedes responder por voz', kind: 'info' }
+                    { icon: 'message', text: 'Responde por escrito en inglés', kind: 'info' }
                 ]
             }
         ],
         lessons: [
             {
                 role: 'ai',
-                label: 'TUTOR IA · READING',
+                label: 'TUTOR IA · LECTURA',
                 text: 'Lee el artículo y selecciona una palabra que no conozcas. Yo te ayudo con el significado en contexto, sin darte la respuesta completa.',
                 chips: [
                     { icon: 'book', text: 'Artículo: The future of remote work', kind: 'info' },
@@ -292,7 +293,7 @@ Best regards`;
     const scenarios = [
         {
             id: 'interview', name: 'Entrevista de trabajo', icon: 'user',
-            goal: 'Responder 10 preguntas y justificar tu experiencia.',
+            goal: 'Responder 4 preguntas y justificar tu experiencia.',
             prompts: [
                 'Could you tell me a little about yourself?',
                 'What are your main strengths for this position?',
@@ -368,8 +369,8 @@ Best regards`;
             lead: 'Una sesión corta de speaking con apoyo visible, no una conversación infinita.',
             steps: [
                 { n: '1', title: 'Elige el escenario', text: 'Entrevista, café o presentación formal.' },
-                { n: '2', title: 'Responde', text: 'Escribe o usa el micrófono (mock).' },
-                { n: '3', title: 'Analiza la ruta', text: 'Revisa vocabulario y momentos de trabazón.' }
+                { n: '2', title: 'Responde', text: 'Escribe tu respuesta en inglés.' },
+                { n: '3', title: 'Avanza', text: 'Pide una pista o pasa a la siguiente pregunta.' }
             ]
         },
         lessons: {
