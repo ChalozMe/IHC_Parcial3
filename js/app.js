@@ -14,7 +14,6 @@
 
     let modalOpen = false;
     let pendingCriteria = null;
-    let micTimer = null;
     let toastTimer = null;
 
     const $ = (sel, root = document) => root.querySelector(sel);
@@ -35,6 +34,7 @@
             if (active) btn.setAttribute('aria-current', 'true');
             else btn.removeAttribute('aria-current');
             btn.setAttribute('aria-pressed', String(active));
+            if (active) { const nav = btn.parentElement; nav.scrollLeft = Math.max(0, btn.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft - 8); }
             btn.title = active ? `Actividad actual: ${D.modes[btn.dataset.mode].label}` : `Cambiar a ${D.modes[btn.dataset.mode].label} y ver sus chats`;
         });
 
@@ -46,8 +46,6 @@
         }
         if (btn) btn.setAttribute('aria-expanded', String(st.suggestionsOpen));
 
-        const hint = $('#composer-mode-hint');
-        if (hint) hint.textContent = D.modes[st.mode].modeHint;
         const input = $('#chat-input');
         if (input) input.placeholder = D.modes[st.mode].placeholder;
     }
@@ -61,10 +59,10 @@
         const stages = mode.stages.map((label, index) => {
             const state = index < st.activeStage ? 'is-done' : index === st.activeStage ? 'is-active' : '';
             return `
-                <button class="stage ${state}" data-action="set-stage" data-stage="${index}">
-                    <span class="stage-dot">${index < st.activeStage ? I.check(13) : index + 1}</span>
-                    <span>${label}</span>
-                </button>
+                <span class="stage ${state}" ${index === st.activeStage ? 'aria-current="step"' : ''}>
+                    <span class="stage-dot" aria-hidden="true">${index < st.activeStage ? I.check(13) : index + 1}</span>
+                    <span>${label}<span class="sr-only">${index < st.activeStage ? ' (hecha)' : index === st.activeStage ? ' (actual)' : ''}</span></span>
+                </span>
                 ${index < mode.stages.length - 1 ? '<span class="stage-line" aria-hidden="true"></span>' : ''}
             `;
         }).join('');
@@ -72,13 +70,61 @@
         const el = $('#stagebar');
         if (!el) return;
         el.innerHTML = `
-            <div class="stages" aria-label="Etapas de la tarea">${stages}</div>
+            <div class="stages" role="list" aria-label="Etapas de la tarea">${stages}</div>
             <div class="stage-actions">
-                <button class="stage-link" data-action="edit-plan" title="Editar plan">Editar plan</button>
-                <button class="stage-btn" data-action="create-branch" title="Crear rama">${I.branch(14)} Crear rama</button>
-                <button class="stage-icon" data-action="play-analysis" title="Reproducir análisis" aria-label="Reproducir análisis">${I.play(15)}</button>
+                <button class="stage-link" data-action="edit-plan">Editar plan</button>
+                <button class="stage-btn" data-action="create-branch">${I.branch(14)} Probar otra versión</button>
+                <button class="stage-icon" data-action="play-analysis">${I.play(14)} Reproducir</button>
                 <button class="details-toggle" data-action="${detailAction}">${detailLabel}</button>
+                <button class="sheet-toggle" data-action="toggle-sheet" aria-controls="side-panel" aria-expanded="${st.sheetOpen}">${I.layers(14)} Apoyo</button>
             </div>
+        `;
+    }
+
+    /* Las 5 tareas del proyecto, con el nombre y el objetivo que la interfaz sí cumple */
+    const GOALS = {
+        writing: 'Dejar tu correo claro, cortés y listo para enviar',
+        conversation: 'Practicar tus respuestas en un escenario',
+        lessons: 'Aprender las palabras del artículo en contexto',
+        questions: 'Resolver tu duda y volver a tu práctica'
+    };
+
+    function goalFor(st) {
+        if (st.mode === 'conversation' && st.scenario === 'presentation') return 'Ensayar tu presentación formal de 3 minutos';
+        return GOALS[st.mode];
+    }
+
+    function renderGoalStrip() {
+        const el = $('#goal-strip');
+        if (!el) return;
+        const st = S.get();
+        let progress;
+        let next;
+        if (st.mode === 'writing') {
+            const pending = D.corrections.filter((c) => (st.statuses[c.id] || 'pending') === 'pending');
+            const done = D.corrections.length - pending.length;
+            progress = `${done} de ${D.corrections.length} correcciones revisadas`;
+            next = pending.length ? `Siguiente: ${pending[0].title}` : 'Todo revisado: copia tu correo o pasa a Cerrar';
+        } else if (st.mode === 'conversation') {
+            const scenario = D.scenarios.find((s) => s.id === st.scenario) || D.scenarios[0];
+            const n = (st.promptIndex || 0) + 1;
+            progress = `Pregunta ${n} de ${scenario.prompts.length} · ${scenario.name}`;
+            next = n < scenario.prompts.length ? 'Responde y pulsa “Siguiente pregunta”' : 'Última pregunta: responde y elige otro escenario';
+        } else if (st.mode === 'lessons') {
+            const saved = D.article.words.filter((w) => st.savedWords.includes(w.word)).length;
+            progress = `${saved} de ${D.article.words.length} palabras guardadas`;
+            next = saved < D.article.words.length ? 'Elige una palabra de la lectura' : 'Lectura completa: repasa tus palabras';
+        } else {
+            const msgs = st.messages.questions;
+            const solved = msgs.filter((m, i) => m.role === 'user' && msgs[i + 1] && msgs[i + 1].role === 'ai').length;
+            progress = `${solved} ${solved === 1 ? 'duda resuelta' : 'dudas resueltas'}`;
+            next = solved ? 'Vuelve a tu práctica cuando quieras' : 'Escribe tu duda o usa una pregunta rápida';
+        }
+        el.innerHTML = `
+            <span class="goal-label">Tu meta</span>
+            <strong class="goal-text">${goalFor(st)}</strong>
+            <span class="goal-progress">${progress}</span>
+            <span class="goal-next">${I.arrowRight(13)} ${next}</span>
         `;
     }
 
@@ -90,47 +136,25 @@
         el.hidden = !visible;
         if (!visible) { el.innerHTML = ''; return; }
         el.innerHTML = `
-            <span class="ribbon-label">${I.branch(13)} Ramas</span>
+            <span class="ribbon-label">${I.branch(13)} Versiones</span>
             ${st.branches.map((b) => `<button class="branch-chip ${st.branch === b ? 'is-active' : ''}" data-action="select-branch" data-branch="${b}">${b}</button>`).join('')}
             <button class="branch-chip add" data-action="create-branch">${I.plus(12)} Nueva</button>
             <span class="ribbon-note">Cada rama guarda sus propios cambios · Kazemitabaar et al.</span>
         `;
     }
 
-    function renderHelpLevels() {
-        const st = S.get();
-        const levels = [
-            { id: 'pista', label: 'Pista' },
-            { id: 'explicacion', label: 'Explicación' },
-            { id: 'ejemplo', label: 'Ejemplo' },
-            { id: 'reescritura', label: 'Reescritura completa' }
-        ];
-        const el = $('#help-levels');
-        if (!el) return;
-        el.innerHTML = `
-            <span class="help-label">Nivel de ayuda</span>
-            ${levels.map((l) => `<button class="help-pill ${st.help === l.id ? 'is-active' : ''}" data-action="set-help" data-help="${l.id}" aria-pressed="${st.help === l.id}">${l.label}</button>`).join('')}
-        `;
-    }
-
     function renderComposerState() {
         const st = S.get();
-        const mic = $('#mic-btn');
-        if (mic) {
-            mic.classList.toggle('is-recording', st.recording);
-            mic.setAttribute('aria-pressed', String(st.recording));
-            mic.setAttribute('aria-label', st.recording ? 'Detener grabación' : 'Hablar en vez de escribir');
+        const send = $('#send-btn');
+        if (send) {
+            const stopping = !!st.typing;
+            if (send.classList.contains('is-stop') !== stopping) {
+                send.classList.toggle('is-stop', stopping);
+                send.setAttribute('aria-label', stopping ? 'Detener respuesta' : 'Enviar mensaje');
+                send.title = stopping ? 'Detener respuesta' : 'Enviar';
+                send.innerHTML = stopping ? I.stop(18) : I.send(20);
+            }
         }
-    }
-
-    function renderDrawer() {
-        const st = S.get();
-        const drawer = $('#drawer');
-        const overlay = $('#drawer-overlay');
-        if (!drawer || !overlay) return;
-        drawer.hidden = !st.drawerOpen;
-        overlay.hidden = !st.drawerOpen;
-        if (st.drawerOpen) drawer.innerHTML = Panels.renderDrawer();
     }
 
     function renderHistory() {
@@ -143,9 +167,68 @@
         if (st.historyOpen) drawer.innerHTML = Panels.renderHistoryDrawer();
     }
 
-    function renderFooter() {
-        const el = $('#recent-footer');
-        if (el) el.innerHTML = Panels.renderFooter();
+    function renderSidebar() {
+        const el = $('#chat-rail');
+        if (el) el.innerHTML = Panels.renderChatRail();
+    }
+
+    /* ---------------- Inicio ---------------- */
+    const TASKS = [
+        { mode: 'writing', icon: 'doc', name: 'Revisión de un correo formal', goal: 'Revisa un correo de solicitud para que sea claro y cortés, y cópialo listo para enviar.', time: '10–15 min' },
+        { mode: 'conversation', icon: 'message', name: 'Práctica de conversación escrita', goal: 'Responde por escrito las preguntas de un escenario (entrevista, café) con pistas y palabras clave.', time: '5–10 min' },
+        { mode: 'lessons', icon: 'book', name: 'Vocabulario en contexto', goal: 'Lee un artículo, mira el significado de las palabras en su contexto y guárdalas para repasar.', time: '5–10 min' },
+        { mode: 'questions', icon: 'search', name: 'Dudas rápidas', goal: 'Resuelve una duda de gramática o vocabulario con una explicación corta y un ejemplo.', time: '2–5 min' },
+        { mode: 'conversation', scenario: 'presentation', icon: 'layers', name: 'Ensayo de una presentación formal', goal: 'Practica las preguntas de una presentación de 3 minutos con sus palabras clave.', time: '5–10 min' }
+    ];
+
+    function renderHome() {
+        const el = $('#home');
+        if (!el) return;
+        const st = S.get();
+        el.hidden = st.view !== 'home';
+        if (st.view !== 'home') return;
+        const active = st.sessions.find((s) => s.active) || st.sessions[0];
+        const done = Object.values(st.statuses).filter((s) => s !== 'pending').length;
+        const resume = active.mode === 'writing' ? `${done} de 4 correcciones revisadas` : D.modes[active.mode].title;
+        el.innerHTML = `
+            <div class="home-inner">
+                <h1 id="home-title">¿Qué quieres practicar hoy?</h1>
+                <p class="home-lead">Sesiones cortas de 5 a 15 minutos. El tutor te da pistas y te explica por qué; tú decides qué cambiar.</p>
+
+                <section class="home-continue" aria-labelledby="continue-title">
+                    <div>
+                        <h2 id="continue-title" class="home-eyebrow">Continuar donde lo dejaste</h2>
+                        <strong>${active.title}</strong>
+                        <span>${resume} · ${active.meta}</span>
+                    </div>
+                    <button class="btn btn-primary btn-lg" data-action="continue-session">Continuar ${I.arrowRight(16)}</button>
+                </section>
+
+                <section aria-labelledby="modes-title">
+                    <h2 id="modes-title" class="home-section-title">O empieza otra actividad</h2>
+                    <div class="home-modes">
+                        ${TASKS.map((t) => `
+                            <button class="home-mode" data-action="start-mode" data-mode="${t.mode}" ${t.scenario ? `data-scenario="${t.scenario}"` : ''}>
+                                <span class="home-mode-icon">${(I[t.icon] || I.doc)(20)}</span>
+                                <span class="home-mode-body">
+                                    <strong>${t.name}</strong>
+                                    <span>${t.goal}</span>
+                                    <small>${t.time}</small>
+                                </span>
+                            </button>`).join('')}
+                    </div>
+                </section>
+
+                <section class="home-about" aria-labelledby="about-title">
+                    <h2 id="about-title" class="home-section-title">Cómo te ayuda el tutor</h2>
+                    <ul>
+                        <li><strong>Primero pistas.</strong> Te da una pista antes que la respuesta, y tú eliges cuánta ayuda quieres.</li>
+                        <li><strong>Explica cada cambio.</strong> Cada corrección trae su regla y un ejemplo.</li>
+                        <li><strong>Puede equivocarse.</strong> Tú decides qué aceptar; siempre puedes deshacer.</li>
+                    </ul>
+                </section>
+            </div>
+        `;
     }
 
     function renderAside() {
@@ -159,19 +242,24 @@
 
     function renderAll() {
         const detailLevel = S.get().detailsLevel;
+        const stNow = S.get();
+        document.body.classList.toggle('view-home', stNow.view === 'home');
+        document.body.classList.toggle('show-tags', !!stNow.showTags);
+        document.body.classList.toggle('reduce-motion', !!stNow.reduceMotion);
+        document.body.classList.toggle('sheet-open', !!stNow.sheetOpen);
         document.body.classList.toggle('learner-mode', detailLevel === 0);
         document.body.classList.toggle('overview-mode', detailLevel === 1);
         document.body.classList.toggle('research-menu-mode', detailLevel === 2);
         document.body.classList.toggle('research-mode', detailLevel >= 3);
         renderHeader();
         renderStagebar();
+        renderGoalStrip();
         renderBranchRibbon();
-        renderHelpLevels();
         renderComposerState();
-        renderDrawer();
         renderHistory();
+        renderSidebar();
+        renderHome();
         renderAside();
-        renderFooter();
         Chat.render();
     }
 
@@ -187,6 +275,12 @@
             el.classList.remove('is-visible');
             window.setTimeout(() => { el.hidden = true; }, 220);
         }, 2600);
+        const live = $('#live-region');
+        if (live) live.textContent = message;
+    }
+
+    /* Anuncia a lectores de pantalla sin mostrar aviso: para acciones cuyo efecto ya se ve en el lugar */
+    function say(message) {
         const live = $('#live-region');
         if (live) live.textContent = message;
     }
@@ -227,7 +321,7 @@
             patch.inspected = inspected;
         }
         S.set(patch);
-        toast(status === 'accepted' ? 'Corrección aceptada · la reescritura se actualizó.' : status === 'rejected' ? 'Corrección rechazada · se mantiene tu versión.' : 'Corrección devuelta a pendiente.');
+        say(status === 'accepted' ? 'Corrección aceptada. La reescritura se actualizó.' : status === 'rejected' ? 'Corrección rechazada. Se mantiene tu versión.' : 'Corrección devuelta a pendiente.');
     }
 
     function openRule(id) {
@@ -308,7 +402,7 @@
                 <p class="modal-text">Desde aquí puedes ajustar la actividad sin abrir todas las herramientas al mismo tiempo.</p>
                 <div class="process-tool-list">
                     <button class="advanced-option" data-action="open-process-tab" data-tab="plan"><span><strong>Editar plan</strong><small>Ajustar los pasos de la actividad.</small></span>${I.arrowRight(14)}</button>
-                    <button class="advanced-option" data-action="open-branch-overview"><span><strong>Ver ramas</strong><small>Comparar versiones sin perder tu trabajo.</small></span>${I.arrowRight(14)}</button>
+                    <button class="advanced-option" data-action="open-branch-overview"><span><strong>Ver versiones</strong><small>Comparar versiones sin perder tu trabajo.</small></span>${I.arrowRight(14)}</button>
                     <button class="advanced-option" data-action="open-progress"><span><strong>Ver mi progreso</strong><small>Observar lo que ya aprendiste y practicaste.</small></span>${I.arrowRight(14)}</button>
                 </div>
             </div>
@@ -416,10 +510,11 @@
     function openSettings() {
         openModal('Configuración', `
             <div class="modal-body">
-                <div class="settings-row"><div><strong>Reducir movimiento</strong><p class="muted-text">Desactiva las animaciones de análisis.</p></div><button class="switch is-on" role="switch" aria-checked="true"><span></span></button></div>
-                <div class="settings-row"><div><strong>Mostrar etiquetas de papers</strong><p class="muted-text">Visibles para la evaluación de la docente.</p></div><button class="switch is-on" role="switch" aria-checked="true"><span></span></button></div>
+                <div class="settings-row"><div><strong>Reducir movimiento</strong><p class="muted-text">Desactiva las animaciones y transiciones.</p></div><button class="switch ${S.get().reduceMotion ? 'is-on' : ''}" role="switch" aria-checked="${S.get().reduceMotion}" aria-label="Reducir movimiento" data-action="toggle-setting" data-setting="reduceMotion"><span></span></button></div>
+                <div class="settings-row"><div><strong>Modo evaluación</strong><p class="muted-text">Muestra las etiquetas de los papers en cada elemento.</p></div><button class="switch ${S.get().showTags ? 'is-on' : ''}" role="switch" aria-checked="${S.get().showTags}" aria-label="Modo evaluación: mostrar etiquetas de papers" data-action="toggle-setting" data-setting="showTags"><span></span></button></div>
+                <div class="settings-row"><div><strong>Datos guardados</strong><p class="muted-text">Tus palabras, chats y correcciones se guardan en este navegador. Puedes borrarlos cuando quieras.</p></div><button class="btn" data-action="clear-data">Borrar mis datos</button></div>
                 <div class="settings-row"><div><strong>Tema</strong><p class="muted-text">Claro · Figtree · paleta teal.</p></div><span class="paper-tag">Main.dc.html</span></div>
-                <div class="modal-note">${I.info(14)} Demo visual: los controles de configuración son mock.</div>
+                <div class="modal-note">${I.info(14)} El tema es fijo en esta demo; los demás ajustes sí funcionan.</div>
                 <div class="modal-actions"><button class="btn btn-primary" data-action="modal-close">Cerrar</button></div>
             </div>
         `, 'Configuración general');
@@ -479,14 +574,25 @@
         toast('Reproduciendo el análisis paso a paso (scrolltelling).');
     }
 
+    function applyScenario(id) {
+        const st = S.get();
+        const scenario = D.scenarios.find((s) => s.id === id);
+        if (!scenario) return;
+        const messages = st.messages.conversation.slice(0, 1).map((m) => Object.assign({}, m, { text: scenario.prompts[0] }));
+        S.set({ scenario: id, messages: Object.assign({}, st.messages, { conversation: messages }), promptIndex: 0 });
+        say(`Escenario: ${scenario.name}.`);
+    }
+
     function nextPrompt() {
         const st = S.get();
         const scenario = D.scenarios.find((s) => s.id === st.scenario);
-        const idx = ((st.promptIndex || 0) + 1) % scenario.prompts.length;
+        const last = scenario.prompts.length - 1;
+        if ((st.promptIndex || 0) >= last) { toast('Esa era la última pregunta. Puedes elegir otro escenario.'); return; }
+        const idx = (st.promptIndex || 0) + 1;
         st.promptIndex = idx;
         st.messages.conversation.push({
             role: 'ai',
-            label: 'INTERVIEWER IA · SPEAKING',
+            label: 'ENTREVISTADORA IA · CONVERSACIÓN',
             text: scenario.prompts[idx],
             chips: [{ icon: 'lightbulb', text: 'Pista: responde con una razón', kind: 'info' }]
         });
@@ -502,22 +608,6 @@
         } else {
             toast(`“${word}” ya estaba guardada.`);
         }
-    }
-
-    function toggleMic() {
-        const st = S.get();
-        if (st.recording) {
-            window.clearTimeout(micTimer);
-            S.set({ recording: false });
-            toast('Grabación detenida (mock).');
-            return;
-        }
-        S.set({ recording: true });
-        toast('Grabando… habla con naturalidad (mock).');
-        micTimer = window.setTimeout(() => {
-            S.set({ recording: false });
-            toast('Grabación guardada (mock).');
-        }, 4200);
     }
 
     function saveCriteria() {
@@ -578,6 +668,55 @@
         }
     }
 
+    /* Chat nuevo en la actividad actual: se crea la sesión y se parte desde cero */
+    const NEW_CHAT_TITLES = {
+        writing: 'Correo nuevo',
+        conversation: 'Práctica nueva',
+        lessons: 'Vocabulario nuevo',
+        questions: 'Duda nueva'
+    };
+
+    function newChat() {
+        const st = S.get();
+        const mode = st.mode;
+        const clone = (v) => JSON.parse(JSON.stringify(v));
+        const sessions = st.sessions.map((s) => Object.assign({}, s, { active: false }));
+        sessions.unshift({ id: `s${Date.now()}`, title: NEW_CHAT_TITLES[mode], device: 'monitor', meta: 'Ahora', mode, active: true });
+        const patch = {
+            sessions,
+            view: 'work',
+            historyMode: mode,
+            historyOpen: false,
+            messages: Object.assign({}, st.messages, { [mode]: clone(D.initialMessages[mode]) }),
+            activeStage: D.modes[mode].activeStage,
+            tab: D.modes[mode].tabs[0].id,
+            help: 'pista',
+            detailsLevel: 0,
+            sideOpen: false,
+            sideAnswer: null,
+            suggestionsOpen: false,
+            typing: false
+        };
+        if (mode === 'writing') {
+            Object.assign(patch, {
+                statuses: { c1: 'pending', c2: 'pending', c3: 'pending', c4: 'pending' },
+                inspected: ['c1', 'c2'],
+                version: 'draft',
+                dataLens: false,
+                showDecomp: false,
+                decompAccepted: false,
+                decompIgnored: false
+            });
+        }
+        if (mode === 'conversation') Object.assign(patch, { scenario: 'interview', promptIndex: 0 });
+        if (mode === 'lessons') Object.assign(patch, { selectedWord: null });
+        S.set(patch);
+        const input = $('#chat-input');
+        if (input) { input.value = ''; input.focus(); }
+        Chat.scrollToTop();
+        say(`${NEW_CHAT_TITLES[mode]} creado.`);
+    }
+
     function switchMode(mode) {
         if (!D.modes[mode]) return;
         const m = D.modes[mode];
@@ -585,7 +724,6 @@
             mode,
             activeStage: m.activeStage,
             tab: m.tabs[0].id,
-            drawerOpen: false,
             suggestionsOpen: false,
             detailsLevel: 0,
             sideOpen: false,
@@ -602,9 +740,7 @@
         const st = S.get();
 
         switch (action) {
-            case 'open-drawer': S.set({ drawerOpen: true, historyOpen: false }); break;
-            case 'close-drawer': S.set({ drawerOpen: false }); break;
-            case 'toggle-history': S.set({ historyOpen: !st.historyOpen, drawerOpen: false }); break;
+            case 'toggle-history': S.set({ historyOpen: !st.historyOpen }); break;
             case 'close-history': S.set({ historyOpen: false }); break;
             case 'open-settings': openSettings(); break;
             case 'toggle-suggestions': S.set({ suggestionsOpen: !st.suggestionsOpen }); break;
@@ -639,7 +775,7 @@
             case 'set-stage': {
                 const index = Number(el.dataset.stage);
                 S.set({ activeStage: index });
-                toast(`Etapa: ${D.modes[st.mode].stages[index]}.`);
+                say(`Etapa: ${D.modes[st.mode].stages[index]}.`);
                 break;
             }
             case 'scroll-sessions': {
@@ -652,16 +788,11 @@
                 const selected = st.sessions.find((s) => s.id === el.dataset.session);
                 S.set({ sessions, historyOpen: false, historyMode: selected ? selected.mode : st.historyMode });
                 if (selected && selected.mode) switchMode(selected.mode);
-                toast('Sesión cargada (mock).');
+                if (selected && selected.scenario) applyScenario(selected.scenario);
+                say(`Chat cargado: ${selected ? selected.title : ''}.`);
                 break;
             }
-            case 'select-scenario': {
-                const scenario = D.scenarios.find((s) => s.id === el.dataset.scenario);
-                const messages = st.messages.conversation.slice(0, 1).map((m) => Object.assign({}, m, { text: scenario.prompts[0] }));
-                S.set({ scenario: el.dataset.scenario, messages: Object.assign({}, st.messages, { conversation: messages }), promptIndex: 0 });
-                toast(`Escenario: ${scenario.name}.`);
-                break;
-            }
+            case 'select-scenario': applyScenario(el.dataset.scenario); break;
             case 'next-prompt': nextPrompt(); break;
             case 'select-word': S.set({ selectedWord: el.dataset.word }); break;
             case 'save-word': saveWord(el.dataset.word); break;
@@ -675,7 +806,56 @@
                 }
                 break;
             }
-            case 'toggle-mic': toggleMic(); break;
+            case 'new-chat': newChat(); break;
+            case 'clear-data': {
+                S.clearSaved();
+                closeModal();
+                toast('Datos borrados. Empiezas desde cero.');
+                break;
+            }
+            case 'go-home': S.set({ view: 'home', historyOpen: false, sheetOpen: false, suggestionsOpen: false }); window.scrollTo(0, 0); break;
+            case 'continue-session': {
+                // "Continuar" abre exactamente el chat que muestra la tarjeta
+                const active = st.sessions.find((x) => x.active) || st.sessions[0];
+                if (active.mode !== st.mode) switchMode(active.mode);
+                if (active.scenario && active.scenario !== st.scenario) applyScenario(active.scenario);
+                S.set({ view: 'work', historyMode: active.mode });
+                break;
+            }
+            case 'start-mode': {
+                // el chat más reciente de esa actividad pasa a ser el actual
+                const mode = el.dataset.mode;
+                const scenarioId = el.dataset.scenario;
+                const recent = st.sessions.find((x) => x.mode === mode && (!scenarioId || x.scenario === scenarioId)) || st.sessions.find((x) => x.mode === mode);
+                const sessions = recent ? st.sessions.map((x) => Object.assign({}, x, { active: x === recent })) : st.sessions;
+                switchMode(mode);
+                S.set({ view: 'work', historyMode: mode, sessions });
+                if (scenarioId) applyScenario(scenarioId);
+                break;
+            }
+            case 'toggle-sheet': S.set({ sheetOpen: !st.sheetOpen }); break;
+            case 'close-sheet': S.set({ sheetOpen: false }); break;
+            case 'toggle-setting': {
+                const key = el.dataset.setting;
+                const next = !st[key];
+                S.set({ [key]: next });
+                el.classList.toggle('is-on', next);
+                el.setAttribute('aria-checked', String(next));
+                break;
+            }
+            case 'retry-last': Chat.retry(); break;
+            case 'copy-final': {
+                const text = Panels.finalPlainText();
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => toast('Correo final copiado.')).catch(() => toast('No se pudo copiar; ve a “Versión final” y copia el texto.'));
+                } else {
+                    toast('Ve a “Versión final” y copia el texto.');
+                }
+                break;
+            }
+            case 'msg-regen': Chat.regenerate(Number(el.dataset.idx)); break;
+            case 'msg-rate': Chat.rate(Number(el.dataset.idx), el.dataset.rate); say('Valoración guardada.'); break;
+            case 'msg-copy': Chat.copy(Number(el.dataset.idx)).then((ok) => toast(ok ? 'Respuesta copiada.' : 'No se pudo copiar; selecciona el texto.')); break;
             case 'focus-composer': {
                 const input = $('#chat-input');
                 if (input) input.focus();
@@ -845,6 +1025,10 @@
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
+                if (S.get().typing) {
+                    if (e.submitter && e.submitter.id === 'send-btn') Chat.stop();
+                    return;
+                }
                 const input = $('#chat-input');
                 if (!input) return;
                 const text = input.value;
@@ -873,7 +1057,8 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (modalOpen) closeModal();
-                else if (S.get().drawerOpen) S.set({ drawerOpen: false });
+                else if (S.get().historyOpen) S.set({ historyOpen: false });
+                else if (S.get().sheetOpen) S.set({ sheetOpen: false });
                 else if (S.get().suggestionsOpen) S.set({ suggestionsOpen: false });
             }
         });
@@ -893,5 +1078,6 @@
         S.subscribe(renderAll);
         bindEvents();
         renderAll();
+        window.addEventListener('resize', renderHeader);
     });
 })();

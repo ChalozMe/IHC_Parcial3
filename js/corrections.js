@@ -20,18 +20,29 @@
         const help = S.get().help;
         const parts = [];
         if (help === 'pista') {
-            parts.push(`<div class="hint-box"><strong>Pista:</strong> ${c.hint}</div>
-                <button class="text-btn mt-8" data-action="correction-explain" data-id="${c.id}">Mostrar explicación</button>`);
+            parts.push(`<div class="hint-box"><strong>Pista:</strong> ${c.hint}</div>`);
             return parts.join('');
         }
         parts.push(`<div class="hint-box"><strong>Pista:</strong> ${c.hint}</div>`);
         if (help === 'explicacion' || help === 'ejemplo' || help === 'reescritura') {
             parts.push(`<p class="why"><strong>Por qué:</strong> ${c.why}</p>`);
+            if (c.alt) parts.push(`<p class="why alt"><strong>También válido:</strong> ${c.alt}</p>`);
         }
         if (help === 'ejemplo' || help === 'reescritura') {
             parts.push(`<div class="example-box"><span class="example-label">Ejemplo</span>${c.example}</div>`);
+            parts.push(`<p class="try-first">${I.wand(14)} Antes de aceptar, intenta escribirla tú con tus palabras.</p>`);
         }
         return parts.join('');
+    }
+
+    /* Nivel de ayuda junto a lo que modifica: la tarjeta (proximidad) */
+    function helpControl() {
+        const help = S.get().help;
+        return `
+            <div class="card-help" role="group" aria-label="Nivel de ayuda">
+                <span class="help-label">Ayuda</span>
+                ${Object.keys(helpLabels).map((id) => `<button class="help-pill ${help === id ? 'is-active' : ''}" data-action="set-help" data-help="${id}" aria-pressed="${help === id}">${helpLabels[id]}</button>`).join('')}
+            </div>`;
     }
 
     function renderCard(c) {
@@ -86,6 +97,7 @@
                     <span class="status-pill ${status}">${status === 'pending' ? 'Pendiente' : status === 'accepted' ? 'Aceptada' : 'Rechazada'}</span>
                 </div>
 
+                ${simple ? helpControl() : ''}
                 ${diff}
                 ${helpsFor(c)}
 
@@ -169,13 +181,17 @@
         if (done < 4) return '';
         const accepted = Object.values(st.statuses).filter((s) => s === 'accepted').length;
         return `
-            <section class="insight-card" aria-label="Insight final">
-                <span class="insight-icon">${I.sparkles(18)}</span>
+            <section class="insight-card is-goal-done" aria-label="Tu correo está listo">
+                <span class="insight-icon">${I.check(18)}</span>
                 <div>
-                    <strong>Insight · tu correo está listo para revisión</strong>
-                    <p>${accepted} de 4 correcciones aceptadas. La petición se mantiene clara y el tono es adecuado para una profesora.</p>
+                    <strong>Tu correo está listo para enviar</strong>
+                    <p>Aceptaste ${accepted} de 4 correcciones. La petición es clara y el tono es adecuado para una profesora.</p>
+                    <div class="insight-actions">
+                        <button class="btn btn-primary" data-action="copy-final">${I.copy(14)} Copiar correo final</button>
+                        <button class="btn" data-action="set-stage" data-stage="3">Ir a Cerrar ${I.arrowRight(14)}</button>
+                        <button class="text-btn" data-action="open-export">${I.export(14)} Exportar resumen</button>
+                    </div>
                 </div>
-                <button class="text-btn" data-action="open-export">${I.export(14)} Exportar</button>
             </section>
         `;
     }
@@ -219,7 +235,7 @@
             const st = S.get();
             if (st.detailsLevel === 3 && st.tab === 'path') return `${window.Graph.render()}${renderProgress()}`;
             const current = D.corrections.find((c) => (st.statuses[c.id] || 'pending') === 'pending') || D.corrections[D.corrections.length - 1];
-            if (st.detailsLevel !== 3 || st.tab !== 'path') return `${renderCard(current)}${renderProgress()}${renderInsight()}`;
+            if (st.detailsLevel !== 3 || st.tab !== 'path') return `${renderCard(current)}${renderInsight()}`;
             return `
                 ${window.Graph.render()}
                 ${renderDataView()}

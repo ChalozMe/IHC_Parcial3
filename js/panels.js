@@ -1,5 +1,5 @@
 /* ============================================================
-   Panels · tabs del aside, footer, sugerencias y drawer
+   Panels · tabs del aside, chats recientes, sugerencias e historial
    Papers: Gu (workflows), Kazemitabaar (supuestos), LightVA (task flow)
    ============================================================ */
 (function () {
@@ -48,13 +48,23 @@
         return text.split('\n\n').map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
     }
 
+    function finalPlainText() {
+        const st = S.get();
+        let text = D.writingText;
+        D.corrections.slice().sort((a, b) => b.before.length - a.before.length).forEach((c) => {
+            if (st.statuses[c.id] === 'accepted') text = text.split(c.before).join(c.after);
+        });
+        return text;
+    }
+
     function legend() {
+        /* cada categoría usa la misma marca que aparece en el texto (forma + color) */
         return `
-            <div class="legend">
-                <span><i class="legend-mark grammar"></i>Gramática</span>
-                <span><i class="legend-mark vocab"></i>Vocabulario</span>
-                <span><i class="legend-mark tone"></i>Tono</span>
-                <span><i class="legend-mark clarity"></i>Claridad</span>
+            <div class="legend" aria-label="Leyenda de marcas en el texto">
+                <span><b class="legend-sample hl-grammar">ab</b>Gramática</span>
+                <span><b class="legend-sample hl-vocab">ab</b>Vocabulario</span>
+                <span><b class="legend-sample hl-tone">ab</b>Tono</span>
+                <span><b class="legend-sample hl-clarity">ab</b>Claridad</span>
             </div>`;
     }
 
@@ -146,18 +156,18 @@
             ${legend()}
             <div class="lens-row">
                 <div>
-                    <strong>Data lens</strong>
-                    <p class="muted-text">Colorea las zonas ya inspeccionadas.</p>
+                    <strong>Resaltar lo revisado</strong>
+                    <p class="muted-text">Colorea las zonas que ya inspeccionaste.</p>
                 </div>
-                <button class="switch ${st.dataLens ? 'is-on' : ''}" data-action="toggle-lens" role="switch" aria-checked="${st.dataLens}" aria-label="Activar data lens"><span></span></button>
+                <button class="switch ${st.dataLens ? 'is-on' : ''}" data-action="toggle-lens" role="switch" aria-checked="${st.dataLens}" aria-label="Resaltar las zonas revisadas"><span></span></button>
             </div>
             <div class="coverage-box">
                 <div class="coverage-head"><span>Cobertura de revisión</span><strong>${Math.round((inspected / 4) * 100)}%</strong></div>
                 <div class="coverage-bar"><span style="width:${Math.round((inspected / 4) * 100)}%"></span></div>
-                <p class="muted-text">${inspected} de 4 zonas inspeccionadas · la IA sugiere revisar las restantes.</p>
+                <p class="muted-text">${inspected} de 4 zonas inspeccionadas${inspected < 4 ? ' · la IA sugiere revisar las restantes.' : ' · ya revisaste todo.'}</p>
             </div>
             <div class="panel-actions">
-                <button class="btn btn-primary" data-action="open-synonyms">${I.search(14)} Buscar sinónimos</button>
+                <button class="btn" data-action="open-synonyms">${I.search(14)} Buscar sinónimos</button>
                 <button class="btn" data-action="open-export">${I.export(14)} Exportar resumen</button>
             </div>
         `;
@@ -326,14 +336,13 @@
 
     function renderVocabularyPanel() {
         const st = S.get();
+        if (st.mode === 'lessons') return renderSavedWordsPanel();
         const scenario = D.scenarios.find((s) => s.id === st.scenario);
-        const words = st.mode === 'lessons'
-            ? D.article.words
-            : scenario.vocab.map((w, i) => ({ word: w, meaning: ['experiencia', 'fortalezas', 'metas', 'puesto', 'reto', 'trabajo en equipo'][i] || 'palabra clave', example: '' }));
+        const words = scenario.vocab.map((w, i) => ({ word: w, meaning: ['experiencia', 'fortalezas', 'metas', 'puesto', 'reto', 'trabajo en equipo'][i] || 'palabra clave', example: '' }));
 
         return `
             <div class="panel-head">
-                <div><h3>Vocabulario</h3><p>Palabras clave del contexto</p></div>
+                <div><h3>Palabras clave</h3><p>Úsalas en tus respuestas y guárdalas para repasar</p></div>
                 <span class="paper-tag">LightVA · insights</span>
             </div>
             <div class="stack">
@@ -349,6 +358,29 @@
                 `).join('')}
             </div>
             <p class="panel-note">Guardadas: ${st.savedWords.length || 'ninguna'} · se añaden a tu repaso.</p>
+        `;
+    }
+
+    function renderSavedWordsPanel() {
+        const st = S.get();
+        const saved = D.article.words.filter((w) => st.savedWords.includes(w.word));
+        return `
+            <div class="panel-head">
+                <div><h3>Tus palabras</h3><p>Las que guardas de la lectura, para repasar</p></div>
+            </div>
+            ${saved.length ? `
+                <div class="stack">
+                    ${saved.map((w) => `
+                        <article class="word-card is-saved">
+                            <div class="word-top"><strong>${w.word}</strong></div>
+                            <p>${w.meaning}</p>
+                            <p class="muted-text italic">“${w.example}”</p>
+                        </article>`).join('')}
+                </div>` : `
+                <div class="empty-state">
+                    <strong>Todavía no guardas palabras</strong>
+                    <p>Elige una palabra de la lectura y pulsa “Guardar palabra”. Aparecerá aquí para repasarla.</p>
+                </div>`}
         `;
     }
 
@@ -412,17 +444,23 @@
     }
 
     function renderAnswersPanel() {
+        const msgs = S.get().messages.questions;
+        const pairs = [];
+        msgs.forEach((m, i) => {
+            if (m.role === 'user' && msgs[i + 1] && msgs[i + 1].role === 'ai') pairs.push({ q: m.text, a: msgs[i + 1].text });
+        });
         return `
             <div class="panel-head">
-                <div><h3>Respuestas rápidas</h3><p>Explicaciones cortas y ejemplos</p></div>
-                <span class="paper-tag">Gu et al. · workflow</span>
+                <div><h3>Tus dudas</h3><p>Lo que ya resolviste en esta sesión</p></div>
             </div>
-            <div class="stack">
-                <article class="qa-card"><strong>¿Cuándo uso “agree” sin “am”?</strong><p>“Agree” ya es un verbo: I agree, she agrees. Nunca “I am agree”.</p></article>
-                <article class="qa-card"><strong>¿Important o relevant?</strong><p>“Important” es valor general; “relevant” es pertinencia. Para un plazo que afecta tu nota, “relevant”.</p></article>
-                <article class="qa-card"><strong>¿Cómo suena “comfortable”?</strong><p>/ˈkʌmftəbl/, tres sílabas. Evita “com-for-ta-ble”.</p></article>
-            </div>
-            <button class="btn btn-ghost full" data-action="focus-composer">${I.message(14)} Hacer otra pregunta</button>
+            ${pairs.length ? `
+                <div class="stack">
+                    ${pairs.map((x) => `<article class="qa-card"><strong>${escapeHtml(x.q)}</strong><p>${escapeHtml(x.a)}</p></article>`).join('')}
+                </div>` : `
+                <div class="empty-state">
+                    <strong>Aún no hay dudas resueltas</strong>
+                    <p>Escribe tu duda en el chat o prueba una de las preguntas rápidas. La respuesta quedará guardada aquí.</p>
+                </div>`}
         `;
     }
 
@@ -464,81 +502,56 @@
     }
 
     /* ---------------- Footer / drawer / sugerencias ---------------- */
-    function renderFooter() {
-        const st = S.get();
-        const active = st.sessions.find((s) => s.active) || st.sessions[0];
-        return `
-            <button class="history-toggle" data-action="toggle-history" aria-expanded="${st.historyOpen}" aria-controls="history-drawer">
-                <span class="history-toggle-icon">${I.message(16)}</span>
-                <span><strong>Chats recientes</strong><small>Organizados por actividad</small></span>
-            </button>
-            <div class="history-current"><span>Sesión actual</span><strong>${active.title}</strong><small>${active.meta}</small></div>
-            <button class="history-open-btn" data-action="toggle-history">Ver chats ${I.arrowRight(15)}</button>
-        `;
-    }
-
-    function renderHistoryDrawer() {
+    function historyGroupsHtml() {
         const st = S.get();
         const groups = [
-            { mode: 'writing', label: 'Redacción y escritura', icon: 'doc' },
-            { mode: 'conversation', label: 'Conversación y speaking', icon: 'message' },
-            { mode: 'lessons', label: 'Lectura y vocabulario', icon: 'book' },
+            { mode: 'writing', label: 'Revisión de correo', icon: 'doc' },
+            { mode: 'conversation', label: 'Práctica de conversación', icon: 'message' },
+            { mode: 'lessons', label: 'Vocabulario en contexto', icon: 'book' },
             { mode: 'questions', label: 'Dudas rápidas', icon: 'search' }
         ];
         const currentMode = st.historyMode || st.mode;
         const orderedGroups = groups.slice().sort((a, b) => (a.mode === currentMode ? -1 : b.mode === currentMode ? 1 : 0));
+        return orderedGroups.map((group) => {
+            const sessions = st.sessions.filter((s) => s.mode === group.mode);
+            if (!sessions.length) return '';
+            return `
+                <section class="history-group ${group.mode === currentMode ? 'is-current' : ''}">
+                    <h3>${(I[group.icon] || I.doc)(14)} ${group.label}</h3>
+                    <div class="history-list">
+                        ${sessions.map((s) => `
+                            <button class="history-item ${s.active ? 'is-active' : ''}" data-action="select-session" data-session="${s.id}" ${s.active ? 'aria-current="true"' : ''}>
+                                <span class="history-item-main"><strong>${s.title}</strong><small>${s.active ? 'Chat actual · ' : ''}${s.meta}</small></span>
+                                <span class="history-item-device">${(I[s.device] || I.monitor)(13)} ${s.device === 'phone' ? 'Celular' : 'Laptop'}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>`;
+        }).join('');
+    }
+
+    /* Franja de íconos a la izquierda: inicio, nuevo chat y chats (se abren como panel) */
+    function renderChatRail() {
+        const st = S.get();
         return `
-            <div class="history-head">
-                <div><strong>Tus chats</strong><small>Elige una actividad para continuar</small></div>
-                <button class="icon-btn" data-action="close-history" aria-label="Cerrar chats">${I.close(18)}</button>
-            </div>
-            <div class="history-groups">
-                ${orderedGroups.map((group) => {
-                    const sessions = st.sessions.filter((s) => s.mode === group.mode);
-                    if (!sessions.length) return '';
-                    return `
-                        <section class="history-group ${group.mode === currentMode ? 'is-current' : ''}">
-                            <h3>${(I[group.icon] || I.doc)(14)} ${group.label}</h3>
-                            <div class="history-list">
-                                ${sessions.map((s) => `
-                                    <button class="history-item ${s.active ? 'is-active' : ''}" data-action="select-session" data-session="${s.id}">
-                                        <span class="history-item-main"><strong>${s.title}</strong><small>${s.meta}</small></span>
-                                        <span class="history-item-device">${(I[s.device] || I.monitor)(13)} ${s.device === 'phone' ? 'Celular' : 'Laptop'}</span>
-                                    </button>
-                                `).join('')}
-                            </div>
-                        </section>`;
-                }).join('')}
-            </div>
+            <button class="rail-btn" data-action="go-home">${I.home(20)}<span>Inicio</span></button>
+            <button class="rail-btn" data-action="new-chat">${I.plus(20)}<span>Nuevo</span></button>
+            <button class="rail-btn" data-action="toggle-history" aria-expanded="${st.historyOpen}" aria-controls="history-drawer">${I.message(20)}<span>Chats</span></button>
         `;
     }
 
-    function renderDrawer() {
-        const st = S.get();
+    /* Mismo contenido como panel deslizante (pantallas angostas) */
+    function renderHistoryDrawer() {
         return `
-            <div class="drawer-head">
-                <div class="brand">
-                    <span class="brand-mark">${I.sparkles(18)}</span>
-                    <span><strong>Tutor IA</strong><small>Inglés asistido</small></span>
-                </div>
-                <button class="icon-btn" data-action="close-drawer" aria-label="Cerrar menú">${I.close(18)}</button>
+            <div class="history-head">
+                <div><strong>Chats recientes</strong><small>Elige una actividad para continuar</small></div>
+                <button class="icon-btn" data-action="close-history" aria-label="Cerrar chats">${I.close(18)}</button>
             </div>
-            <p class="drawer-eyebrow">Selector de tareas y modos de práctica</p>
-            <div class="drawer-grid">
-                ${Object.keys(D.modes).map((key) => {
-                    const m = D.modes[key];
-                    return `
-                        <button class="drawer-mode ${st.mode === key ? 'is-active' : ''}" data-action="set-mode" data-mode="${key}">
-                            <span class="drawer-mode-icon">${(I[{ writing: 'doc', conversation: 'message', lessons: 'book', questions: 'search' }[key]] || I.doc)(20)}</span>
-                            <strong>${m.label}</strong>
-                            <span>${m.subtitle}</span>
-                        </button>`;
-                }).join('')}
+            <div class="drawer-actions">
+                <button class="btn" data-action="go-home">${I.home(16)} Inicio</button>
+                <button class="btn" data-action="new-chat">${I.plus(16)} Nuevo chat</button>
             </div>
-            <div class="drawer-footer">
-                <button class="btn" data-action="open-protocol">${I.shield(14)} Protocolo del wizard</button>
-                <button class="btn" data-action="open-debriefing">${I.info(14)} Debriefing</button>
-            </div>
+            <div class="history-groups">${historyGroupsHtml()}</div>
         `;
     }
 
@@ -576,11 +589,11 @@
     }
 
     window.Panels = {
+        finalPlainText,
         renderTabs,
         renderAsideContent,
-        renderFooter,
+        renderChatRail,
         renderHistoryDrawer,
-        renderDrawer,
         renderSuggestions,
         renderAsideFooter() {
             const st = S.get();

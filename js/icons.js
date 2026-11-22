@@ -45,6 +45,10 @@
         wand: (s = 16) => svg('<path d="M4 20L17 7M14 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/>', s),
         table: (s = 16) => svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>', s),
         shield: (s = 16) => svg('<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>', s),
+        home: (s = 16) => svg('<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-6h4v6"/>', s),
+        stop: (s = 16) => svg('<rect x="6" y="6" width="12" height="12" rx="2"/>', s),
+        thumbUp: (s = 16) => svg('<path d="M7 11v9H4v-9z"/><path d="M7 11l4-7a2 2 0 012 2v4h5.5a2 2 0 012 2.3l-1 6A2 2 0 0117.5 20H7"/>', s),
+        thumbDown: (s = 16) => svg('<path d="M17 13V4h3v9z"/><path d="M17 13l-4 7a2 2 0 01-2-2v-4H5.5a2 2 0 01-2-2.3l1-6A2 2 0 016.5 4H17"/>', s),
         microphoneOff: (s = 18) => svg('<path d="M5 5l14 14M9 5a3 3 0 016 0v5M9 10v4a3 3 0 004.2 2.8M5 11a7 7 0 0010.6 6M12 18v3"/>', s)
     };
 })();

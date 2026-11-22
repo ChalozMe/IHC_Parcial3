@@ -24,15 +24,31 @@
         return `<${tag} class="chip ${chip.kind || ''}" ${attrs}>${icon}${escapeHtml(chip.text)}</${tag}>`;
     }
 
-    function messageHtml(msg) {
+    function actionBarHtml(msg, idx) {
+        if (msg.retry) {
+            return `<div class="msg-actions"><button class="msg-action" data-action="retry-last">${I.refresh(14)} Reintentar</button></div>`;
+        }
+        if (!msg.generated) return '';
+        return `
+            <div class="msg-actions" role="group" aria-label="Acciones de esta respuesta">
+                <button class="msg-action" data-action="msg-copy" data-idx="${idx}">${I.copy(14)} Copiar</button>
+                <button class="msg-action" data-action="msg-regen" data-idx="${idx}">${I.refresh(14)} Regenerar</button>
+                <button class="msg-action" data-action="msg-rate" data-idx="${idx}" data-rate="up" aria-pressed="${msg.rating === 'up'}" aria-label="Respuesta útil">${I.thumbUp(14)}</button>
+                <button class="msg-action" data-action="msg-rate" data-idx="${idx}" data-rate="down" aria-pressed="${msg.rating === 'down'}" aria-label="Respuesta no útil">${I.thumbDown(14)}</button>
+            </div>`;
+    }
+
+    function messageHtml(msg, idx) {
         if (msg.role === 'user') {
             return `<div class="bubble user">${escapeHtml(msg.text)}</div>`;
         }
+        const bar = actionBarHtml(msg, idx);
         return `
-            <div class="bubble ai">
-                <div class="bubble-label">${escapeHtml(msg.label || 'TUTOR IA')}</div>
+            <div class="bubble ai ${bar ? 'has-actions' : ''} ${msg.error ? 'error' : ''}">
+                <div class="bubble-label">${msg.error ? I.alert(14) + ' ' : ''}${escapeHtml(msg.label || 'TUTOR IA')}</div>
                 <p>${escapeHtml(msg.text)}</p>
                 ${msg.chips && msg.chips.length ? `<div class="chip-row">${msg.chips.map(chipHtml).join('')}</div>` : ''}
+                ${bar}
             </div>`;
     }
 
@@ -48,7 +64,7 @@
         const st = S.get();
         const msgs = st.messages.writing;
         const initial = msgs.slice(0, 2).map(messageHtml).join('');
-        const rest = msgs.slice(2).map(messageHtml).join('');
+        const rest = msgs.slice(2).map((m, i) => messageHtml(m, i + 2)).join('');
         return `
             ${initial}
             ${window.Corrections.renderAnalysis()}
@@ -67,14 +83,9 @@
                         ${(I[s.icon] || I.message)(13)} ${s.name}
                     </button>
                 `).join('')}
+                <button class="text-btn scenario-next" data-action="next-prompt">Siguiente pregunta ${I.arrowRight(13)}</button>
             </div>
-            <div class="chat-context-note">
-                ${I.info(14)}
-                <span class="context-copy"><b>Objetivo:</b> ${scenario.goal} <span class="paper-tag">Gu et al. · workflow</span></span>
-                <button class="text-btn" data-action="next-prompt">Siguiente pregunta ${I.arrowRight(13)}</button>
-            </div>
-            ${st.messages.conversation.map(messageHtml).join('')}
-            ${modeGuide('conversation')}
+            ${st.messages.conversation.map((m, i) => messageHtml(m, i)).join('')}
             ${st.typing ? typingHtml() : ''}
         `;
     }
@@ -114,8 +125,7 @@
                 <div class="prompt-example">“Te paso esta lectura. ¿Qué significa <b>dedicated</b> aquí? Dame dos ejemplos en inglés y dime cuándo se usa.”</div>
                 <button class="btn btn-ghost" data-action="use-reading-prompt">Escribir mi consulta</button>
             </div>
-            ${st.messages.lessons.map(messageHtml).join('')}
-            ${modeGuide('lessons')}
+            ${st.messages.lessons.map((m, i) => messageHtml(m, i)).join('')}
             ${st.typing ? typingHtml() : ''}
         `;
     }
@@ -152,14 +162,13 @@
     function questionsChat() {
         const st = S.get();
         return `
-            ${st.messages.questions.map(messageHtml).join('')}
+            ${st.messages.questions.map((m, i) => messageHtml(m, i)).join('')}
             <div class="quick-prompts">
                 <span class="muted-text">Prueba una pregunta rápida:</span>
                 <button class="chip" data-action="quick-question" data-text="¿Cuándo uso agree sin am?">${I.message(12)} ¿Cuándo uso “agree” sin “am”?</button>
                 <button class="chip" data-action="quick-question" data-text="¿Diferencia entre important y relevant?">${I.book(12)} important vs relevant</button>
                 <button class="chip" data-action="quick-question" data-text="¿Cómo suena comfortable?">${I.mic(12)} comfortable</button>
             </div>
-            ${modeGuide('questions')}
             ${st.typing ? typingHtml() : ''}
         `;
     }
@@ -229,6 +238,33 @@
         return found || list[list.length - 1];
     }
 
+    let pending = null;
+
+    function announce(text) {
+        const live = document.getElementById('live-region');
+        if (live) live.textContent = text;
+    }
+
+    function generate(mode, text) {
+        S.set({ typing: true });
+        window.Chat.scrollToBottom();
+        if (navigator.onLine === false) {
+            S.get().messages[mode].push({ role: 'ai', label: 'TUTOR IA · SIN CONEXIÓN', text: 'No pude generar la respuesta porque no hay conexión. Tu mensaje se conservó; reinténtalo cuando vuelvas a estar en línea.', retry: true, error: true, chips: [] });
+            S.set({ typing: false });
+            announce('No se pudo generar la respuesta. Sin conexión.');
+            return;
+        }
+        pending = { mode, timer: window.setTimeout(() => {
+            pending = null;
+            const reply = replyFor(mode, text);
+            const label = { writing: 'TUTOR IA · REDACCIÓN', conversation: 'ENTREVISTADORA IA · CONVERSACIÓN', lessons: 'TUTOR IA · LECTURA', questions: 'TUTOR IA · DUDAS' }[mode];
+            S.get().messages[mode].push({ role: 'ai', label, text: reply.text, chips: reply.chips || [], generated: true });
+            S.set({ typing: false });
+            announce(reply.text);
+            window.Chat.scrollToBottom();
+        }, 850) };
+    }
+
     window.Chat = {
         render() {
             const el = document.getElementById('chat-messages');
@@ -258,18 +294,57 @@
         send(text) {
             const st = S.get();
             const clean = String(text || '').trim();
-            if (!clean) return;
+            if (!clean || st.typing) return;
             st.messages[st.mode].push({ role: 'user', text: clean });
-            S.set({ typing: true });
+            generate(st.mode, clean);
+        },
+
+        stop() {
+            if (!pending) return;
+            window.clearTimeout(pending.timer);
+            const mode = pending.mode;
+            pending = null;
+            S.get().messages[mode].push({ role: 'ai', label: 'TUTOR IA · DETENIDO', text: 'Detuviste la respuesta. Puedes reintentar o escribir otra cosa.', retry: true, chips: [] });
+            S.set({ typing: false });
+            announce('Respuesta detenida.');
             window.Chat.scrollToBottom();
-            const mode = st.mode;
-            window.setTimeout(() => {
-                const reply = replyFor(mode, clean);
-                const label = { writing: 'TUTOR IA · REDACCIÓN', conversation: 'INTERVIEWER IA · SPEAKING', lessons: 'TUTOR IA · READING', questions: 'TUTOR IA · DUDAS' }[mode];
-                st.messages[mode].push({ role: 'ai', label, text: reply.text, chips: reply.chips || [] });
-                S.set({ typing: false });
-                window.Chat.scrollToBottom();
-            }, 850);
+        },
+
+        retry() {
+            const st = S.get();
+            const list = st.messages[st.mode];
+            while (list.length && list[list.length - 1].role !== 'user') list.pop();
+            const last = list[list.length - 1];
+            if (last) generate(st.mode, last.text);
+        },
+
+        regenerate(idx) {
+            const st = S.get();
+            const list = st.messages[st.mode];
+            if (st.typing || !list[idx]) return;
+            let u = idx - 1;
+            while (u >= 0 && list[u].role !== 'user') u--;
+            if (u < 0) return;
+            const text = list[u].text;
+            list.splice(idx, 1);
+            generate(st.mode, text);
+        },
+
+        copy(idx) {
+            const st = S.get();
+            const msg = st.messages[st.mode][idx];
+            if (!msg) return Promise.resolve(false);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(msg.text).then(() => true).catch(() => false);
+            }
+            return Promise.resolve(false);
+        },
+
+        rate(idx, value) {
+            const msg = S.get().messages[S.get().mode][idx];
+            if (!msg) return;
+            msg.rating = msg.rating === value ? null : value;
+            S.touch();
         }
     };
 })();
