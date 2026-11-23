@@ -28,9 +28,8 @@
         typing: false,
         activeStage: 2,
         messages: clone(D.initialMessages),
-        scenario: 'interview',
-        selectedWord: null,
-        savedWords: [],
+        vocab: null,                   // conversación de vocabulario en curso (tarea 3)
+        vocabWords: [],                // tus palabras: significado, oración original y la tuya
         plan: clone(D.plan),
         tasks: clone(D.tasks),
         criteria: clone(D.criteria),
@@ -44,14 +43,17 @@
         showTags: false,
         reduceMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
         sheetOpen: false,
-        promptIndex: 0,
+        errBank: {},                   // errores propios por tipo (tarea 2)
+        errPractice: null,             // ronda de práctica en curso
+        errRule: '',
         focusCorrection: null
     };
 
     /* ---------- Guardado en el navegador (que no se pierdan notas ni progreso al recargar) ---------- */
-    const STORE_KEY = 'lingua-ia:v1';
+    const STORE_KEY = 'lingua-ia:v4';
+    const OLD_KEYS = ['lingua-ia:v1', 'lingua-ia:v2', 'lingua-ia:v3'];
     const PERSISTED = [
-        'savedWords', 'sessions', 'statuses', 'inspected', 'messages', 'scenario', 'promptIndex',
+        'vocab', 'vocabWords', 'sessions', 'statuses', 'inspected', 'messages', 'errBank', 'errPractice', 'errRule',
         'help', 'version', 'mode', 'activeStage', 'tab', 'branches', 'branch', 'plan', 'criteria',
         'historyMode', 'showTags', 'reduceMotion'
     ];
@@ -118,7 +120,7 @@
             emit();
         },
         clearSaved() {
-            try { window.localStorage.removeItem(STORE_KEY); } catch (e) { /* nada que borrar */ }
+            try { [STORE_KEY].concat(OLD_KEYS).forEach((k) => window.localStorage.removeItem(k)); } catch (e) { /* nada que borrar */ }
             window.clearTimeout(saveTimer);
             state = clone(initial);
             subscribers.slice().forEach((fn) => fn(state));

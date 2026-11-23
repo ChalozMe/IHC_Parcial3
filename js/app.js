@@ -81,16 +81,14 @@
         `;
     }
 
-    /* Las 5 tareas del proyecto, con el nombre y el objetivo que la interfaz sí cumple */
+    /* Las 3 tareas de la guía (Causalidad__Cobertura_y_Bugs-7.md) */
     const GOALS = {
-        writing: 'Dejar tu correo claro, cortés y listo para enviar',
-        conversation: 'Practicar tus respuestas en un escenario',
-        lessons: 'Aprender las palabras del artículo en contexto',
-        questions: 'Resolver tu duda y volver a tu práctica'
+        writing: 'Producir un correo formal claro, con buen vocabulario y gramática correcta',
+        errors: 'Reconocer y corregir tus errores para no repetirlos',
+        lessons: 'Aprender palabras nuevas en contexto y usarlas'
     };
 
     function goalFor(st) {
-        if (st.mode === 'conversation' && st.scenario === 'presentation') return 'Ensayar tu presentación formal de 3 minutos';
         return GOALS[st.mode];
     }
 
@@ -104,21 +102,15 @@
             const pending = D.corrections.filter((c) => (st.statuses[c.id] || 'pending') === 'pending');
             const done = D.corrections.length - pending.length;
             progress = `${done} de ${D.corrections.length} correcciones revisadas`;
-            next = pending.length ? `Siguiente: ${pending[0].title}` : 'Todo revisado: copia tu correo o pasa a Cerrar';
-        } else if (st.mode === 'conversation') {
-            const scenario = D.scenarios.find((s) => s.id === st.scenario) || D.scenarios[0];
-            const n = (st.promptIndex || 0) + 1;
-            progress = `Pregunta ${n} de ${scenario.prompts.length} · ${scenario.name}`;
-            next = n < scenario.prompts.length ? 'Responde y pulsa “Siguiente pregunta”' : 'Última pregunta: responde y elige otro escenario';
-        } else if (st.mode === 'lessons') {
-            const saved = D.article.words.filter((w) => st.savedWords.includes(w.word)).length;
-            progress = `${saved} de ${D.article.words.length} palabras guardadas`;
-            next = saved < D.article.words.length ? 'Elige una palabra de la lectura' : 'Lectura completa: repasa tus palabras';
+            next = pending.length ? `Siguiente: ${pending[0].title}` : 'Todo revisado: copia tu correo y envíalo';
+        } else if (st.mode === 'errors') {
+            const e = window.Errors.status();
+            progress = e.progress;
+            next = e.next;
         } else {
-            const msgs = st.messages.questions;
-            const solved = msgs.filter((m, i) => m.role === 'user' && msgs[i + 1] && msgs[i + 1].role === 'ai').length;
-            progress = `${solved} ${solved === 1 ? 'duda resuelta' : 'dudas resueltas'}`;
-            next = solved ? 'Vuelve a tu práctica cuando quieras' : 'Escribe tu duda o usa una pregunta rápida';
+            const v = window.Vocab.status();
+            progress = v.progress;
+            next = v.next;
         }
         el.innerHTML = `
             <span class="goal-label">Tu meta</span>
@@ -174,11 +166,9 @@
 
     /* ---------------- Inicio ---------------- */
     const TASKS = [
-        { mode: 'writing', icon: 'doc', name: 'Revisión de un correo formal', goal: 'Revisa un correo de solicitud para que sea claro y cortés, y cópialo listo para enviar.', time: '10–15 min' },
-        { mode: 'conversation', icon: 'message', name: 'Práctica de conversación escrita', goal: 'Responde por escrito las preguntas de un escenario (entrevista, café) con pistas y palabras clave.', time: '5–10 min' },
-        { mode: 'lessons', icon: 'book', name: 'Vocabulario en contexto', goal: 'Lee un artículo, mira el significado de las palabras en su contexto y guárdalas para repasar.', time: '5–10 min' },
-        { mode: 'questions', icon: 'search', name: 'Dudas rápidas', goal: 'Resuelve una duda de gramática o vocabulario con una explicación corta y un ejemplo.', time: '2–5 min' },
-        { mode: 'conversation', scenario: 'presentation', icon: 'layers', name: 'Ensayo de una presentación formal', goal: 'Practica las preguntas de una presentación de 3 minutos con sus palabras clave.', time: '5–10 min' }
+        { mode: 'writing', icon: 'doc', name: 'Redacción asistida', goal: 'Planifica, escribe y revisa un correo formal en inglés con estructura clara, vocabulario adecuado y gramática correcta.', time: '10–15 min' },
+        { mode: 'errors', icon: 'tag', name: 'Práctica de errores frecuentes', goal: 'Reconoce y corrige tus propios errores con oraciones nuevas para no repetirlos.', time: '5–10 min' },
+        { mode: 'lessons', icon: 'book', name: 'Vocabulario en contexto', goal: 'Lee un texto, entiende las palabras nuevas en su contexto, regístralas y úsalas.', time: '5–10 min' }
     ];
 
     function renderHome() {
@@ -189,7 +179,7 @@
         if (st.view !== 'home') return;
         const active = st.sessions.find((s) => s.active) || st.sessions[0];
         const done = Object.values(st.statuses).filter((s) => s !== 'pending').length;
-        const resume = active.mode === 'writing' ? `${done} de 4 correcciones revisadas` : D.modes[active.mode].title;
+        const resume = active.mode === 'writing' ? `${done} de 4 correcciones revisadas` : active.mode === 'errors' ? window.Errors.status().progress : window.Vocab.status().progress;
         el.innerHTML = `
             <div class="home-inner">
                 <h1 id="home-title">¿Qué quieres practicar hoy?</h1>
@@ -205,10 +195,10 @@
                 </section>
 
                 <section aria-labelledby="modes-title">
-                    <h2 id="modes-title" class="home-section-title">O empieza otra actividad</h2>
+                    <h2 id="modes-title" class="home-section-title">Tus tres tareas</h2>
                     <div class="home-modes">
                         ${TASKS.map((t) => `
-                            <button class="home-mode" data-action="start-mode" data-mode="${t.mode}" ${t.scenario ? `data-scenario="${t.scenario}"` : ''}>
+                            <button class="home-mode" data-action="start-mode" data-mode="${t.mode}">
                                 <span class="home-mode-icon">${(I[t.icon] || I.doc)(20)}</span>
                                 <span class="home-mode-body">
                                     <strong>${t.name}</strong>
@@ -315,6 +305,13 @@
     function setCorrection(id, status) {
         const st = S.get();
         const statuses = Object.assign({}, st.statuses, { [id]: status });
+        /* Una corrección aceptada pasa a ser un error propio para practicar (tarea 2) */
+        const c = D.corrections.find((x) => x.id === id);
+        if (c && c.practice) {
+            const sentence = (D.writingText.split(/(?<=[.!?])\s+|\n+/).find((x) => x.includes(c.before)) || c.before).trim();
+            if (status === 'accepted') window.Errors.add({ ruleId: c.practice, key: `mail-${id}`, sentence, fragment: c.before, fix: sentence.replace(c.before, c.after), source: 'Correo: prórroga' });
+            else window.Errors.remove(c.practice, `mail-${id}`);
+        }
         const patch = { statuses, showDecomp: true, decompIgnored: false };
         if (status !== 'pending') {
             const inspected = st.inspected.includes(id) ? st.inspected : st.inspected.concat(id);
@@ -537,26 +534,6 @@
         `, 'Kazemitabaar · UIST\'24');
     }
 
-    function openLessonHint(word) {
-        const w = D.article.words.find((x) => x.word === word);
-        if (!w) return;
-        openModal(w.word, `
-            <div class="modal-body">
-                <p class="modal-text"><b>Significado en el artículo:</b> ${w.meaning}</p>
-                <div class="rule-example good"><span>En contexto</span>${w.example}</div>
-                <p class="modal-text"><b>Cómo se usa:</b> ${w.use}</p>
-                <div class="word-examples-modal">
-                    <strong>Otros ejemplos para comparar</strong>
-                    ${(w.examples || []).map((example) => `<div class="word-example-line">“${example}”</div>`).join('')}
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-primary" data-action="save-word" data-word="${w.word}">${I.plus(14)} Guardar palabra</button>
-                    <button class="btn" data-action="modal-close">Cerrar</button>
-                </div>
-            </div>
-        `, 'Kazemitabaar · side query');
-    }
-
     function playAnalysis() {
         const nodes = $$('.graph-node');
         if (!nodes.length) { toast('El mapa de revisión no está visible en este modo.'); return; }
@@ -572,42 +549,6 @@
             }, i * 420);
         });
         toast('Reproduciendo el análisis paso a paso (scrolltelling).');
-    }
-
-    function applyScenario(id) {
-        const st = S.get();
-        const scenario = D.scenarios.find((s) => s.id === id);
-        if (!scenario) return;
-        const messages = st.messages.conversation.slice(0, 1).map((m) => Object.assign({}, m, { text: scenario.prompts[0] }));
-        S.set({ scenario: id, messages: Object.assign({}, st.messages, { conversation: messages }), promptIndex: 0 });
-        say(`Escenario: ${scenario.name}.`);
-    }
-
-    function nextPrompt() {
-        const st = S.get();
-        const scenario = D.scenarios.find((s) => s.id === st.scenario);
-        const last = scenario.prompts.length - 1;
-        if ((st.promptIndex || 0) >= last) { toast('Esa era la última pregunta. Puedes elegir otro escenario.'); return; }
-        const idx = (st.promptIndex || 0) + 1;
-        st.promptIndex = idx;
-        st.messages.conversation.push({
-            role: 'ai',
-            label: 'ENTREVISTADORA IA · CONVERSACIÓN',
-            text: scenario.prompts[idx],
-            chips: [{ icon: 'lightbulb', text: 'Pista: responde con una razón', kind: 'info' }]
-        });
-        S.set({});
-        Chat.scrollToBottom();
-    }
-
-    function saveWord(word) {
-        const st = S.get();
-        if (!st.savedWords.includes(word)) {
-            S.set({ savedWords: st.savedWords.concat(word) });
-            toast(`“${word}” guardada para repaso.`);
-        } else {
-            toast(`“${word}” ya estaba guardada.`);
-        }
     }
 
     function saveCriteria() {
@@ -671,9 +612,8 @@
     /* Chat nuevo en la actividad actual: se crea la sesión y se parte desde cero */
     const NEW_CHAT_TITLES = {
         writing: 'Correo nuevo',
-        conversation: 'Práctica nueva',
-        lessons: 'Vocabulario nuevo',
-        questions: 'Duda nueva'
+        errors: 'Práctica nueva',
+        lessons: 'Vocabulario nuevo'
     };
 
     function newChat() {
@@ -708,8 +648,8 @@
                 decompIgnored: false
             });
         }
-        if (mode === 'conversation') Object.assign(patch, { scenario: 'interview', promptIndex: 0 });
-        if (mode === 'lessons') Object.assign(patch, { selectedWord: null });
+        if (mode === 'errors') Object.assign(patch, { errPractice: null, errRule: '' });
+        if (mode === 'lessons') Object.assign(patch, { vocab: null });
         S.set(patch);
         const input = $('#chat-input');
         if (input) { input.value = ''; input.focus(); }
@@ -788,22 +728,17 @@
                 const selected = st.sessions.find((s) => s.id === el.dataset.session);
                 S.set({ sessions, historyOpen: false, historyMode: selected ? selected.mode : st.historyMode });
                 if (selected && selected.mode) switchMode(selected.mode);
-                if (selected && selected.scenario) applyScenario(selected.scenario);
                 say(`Chat cargado: ${selected ? selected.title : ''}.`);
                 break;
             }
-            case 'select-scenario': applyScenario(el.dataset.scenario); break;
-            case 'next-prompt': nextPrompt(); break;
-            case 'select-word': S.set({ selectedWord: el.dataset.word }); break;
-            case 'save-word': saveWord(el.dataset.word); break;
-            case 'hint-word': openLessonHint(st.selectedWord || 'productive'); break;
-            case 'open-word-examples': openLessonHint(el.dataset.word || st.selectedWord || 'productive'); break;
-            case 'use-reading-prompt': {
-                const input = $('#chat-input');
-                if (input) {
-                    input.value = 'Te paso esta lectura. ¿Qué significa "dedicated" aquí? Dame dos ejemplos en inglés y dime cuándo se usa.';
-                    input.focus();
-                }
+            case 'vocab-mark': {
+                // marcar una palabra del texto: no baja el chat y el foco se queda en la palabra
+                const scroll = $('#chat-scroll');
+                const top = scroll ? scroll.scrollTop : 0;
+                window.Vocab.action('vocab-mark', el.dataset.id, el);
+                if (scroll) scroll.scrollTop = top;
+                const again = document.getElementById(`vt-${el.dataset.id}`);
+                if (again) { again.focus(); say(`${again.textContent} ${again.getAttribute('aria-pressed') === 'true' ? 'marcada' : 'desmarcada'}`); }
                 break;
             }
             case 'new-chat': newChat(); break;
@@ -818,19 +753,16 @@
                 // "Continuar" abre exactamente el chat que muestra la tarjeta
                 const active = st.sessions.find((x) => x.active) || st.sessions[0];
                 if (active.mode !== st.mode) switchMode(active.mode);
-                if (active.scenario && active.scenario !== st.scenario) applyScenario(active.scenario);
                 S.set({ view: 'work', historyMode: active.mode });
                 break;
             }
             case 'start-mode': {
                 // el chat más reciente de esa actividad pasa a ser el actual
                 const mode = el.dataset.mode;
-                const scenarioId = el.dataset.scenario;
-                const recent = st.sessions.find((x) => x.mode === mode && (!scenarioId || x.scenario === scenarioId)) || st.sessions.find((x) => x.mode === mode);
+                const recent = st.sessions.find((x) => x.mode === mode);
                 const sessions = recent ? st.sessions.map((x) => Object.assign({}, x, { active: x === recent })) : st.sessions;
                 switchMode(mode);
                 S.set({ view: 'work', historyMode: mode, sessions });
-                if (scenarioId) applyScenario(scenarioId);
                 break;
             }
             case 'toggle-sheet': S.set({ sheetOpen: !st.sheetOpen }); break;
@@ -861,16 +793,6 @@
                 if (input) input.focus();
                 break;
             }
-            case 'quick-question': {
-                if (st.mode !== 'questions') {
-                    switchMode('questions');
-                    window.setTimeout(() => Chat.send(el.dataset.text), 60);
-                } else {
-                    Chat.send(el.dataset.text);
-                }
-                break;
-            }
-
             /* Correcciones */
             case 'correction-accept': setCorrection(el.dataset.id, 'accepted'); break;
             case 'correction-reject': setCorrection(el.dataset.id, 'rejected'); break;
@@ -983,11 +905,9 @@
 
             default: {
                 if (action.indexOf('open-rule-') === 0) openRule(action.replace('open-rule-', ''));
-                else if (action.indexOf('save-word-') === 0) saveWord(action.replace('save-word-', ''));
-                else if (action === 'create-exercise') {
-                    st.messages[st.mode].push({ role: 'ai', label: 'TUTOR IA · EJERCICIO', text: 'Completa: “I ______ (agree) with the deadline.” Escribe tu respuesta y te doy feedback.', chips: [] });
-                    S.set({});
-                }
+                else if (action.indexOf('errors-') === 0) window.Errors.action(action, el.dataset.id, el);
+                else if (action.indexOf('vocab-') === 0) { window.Vocab.action(action, el.dataset.id, el); Chat.scrollToBottom(); }
+                else if (action === 'set-mode-writing') { switchMode('writing'); S.set({ historyMode: 'writing' }); }
                 break;
             }
         }
@@ -1055,6 +975,16 @@
         }
 
         document.addEventListener('keydown', (e) => {
+            /* Texto de vocabulario: flechas, Inicio y Fin para moverse entre palabras; Enter marca */
+            const tok = e.target.closest && e.target.closest('.voc-tok');
+            if (tok && /^Arrow(Left|Right|Up|Down)$|^Home$|^End$/.test(e.key)) {
+                const all = [...tok.closest('[data-roving]').querySelectorAll('.voc-tok')];
+                let i = all.indexOf(tok);
+                i = e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : i + (/Left|Up/.test(e.key) ? -1 : 1);
+                const n = all[Math.max(0, Math.min(all.length - 1, i))];
+                tok.tabIndex = -1; n.tabIndex = 0; n.focus(); e.preventDefault();
+                return;
+            }
             if (e.key === 'Escape') {
                 if (modalOpen) closeModal();
                 else if (S.get().historyOpen) S.set({ historyOpen: false });

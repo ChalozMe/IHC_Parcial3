@@ -2334,3 +2334,61 @@ button.brand-lockup { border: 0; padding: 0; background: transparent; border-rad
 .drawer-actions { display: flex; gap: 8px; margin-bottom: 14px; }
 .drawer-actions .btn { flex: 1; height: 40px; justify-content: center; gap: 7px; font-size: 13px; }
 @media (max-width: 720px) { .view-home .brand-lockup { display: inline-flex; } }
+
+/* ============================================================
+   Tarea 2 · Errores frecuentes (tarjetas dentro del chat)
+   ============================================================ */
+.bubble.ai.is-ok { border-color: var(--cat-clarity-mark); }
+.bubble-card { margin-top: 10px; display: grid; gap: 10px; }
+.bubble-card .btn-sm { min-height: 32px; padding: 0 12px; font-size: 13px; }
+button.chip { min-height: 32px; height: auto; padding: 4px 11px; font-size: 13px; }
+.err-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.err-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-3); }
+.err-list strong { display: block; font-size: 14px; }
+.err-list small { display: block; color: var(--text-3); font-size: 12.5px; margin-top: 2px; }
+.err-ex { display: grid; gap: 6px; }
+.err-bad, .err-good { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 10px; font-size: 14px; }
+.err-bad { background: var(--surface-2); color: var(--text-2); }
+.err-good { background: var(--cat-clarity-soft); color: var(--text); }
+.err-bad svg { color: var(--text-3); margin-top: 3px; }
+.err-good svg { color: var(--cat-clarity); margin-top: 3px; }
+.err-rule { font-size: 14px; }
+.err-tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.err-tok { min-height: 40px; min-width: 40px; padding: 0 10px; border: 1px solid var(--border-2); border-radius: 10px; background: var(--surface); font-size: 16px; }
+.err-tok:hover { border-color: var(--text-2); }
+.err-sentence { font-size: 16px; }
+.err-sentence mark, .err-bad mark { background: var(--cat-grammar-soft); color: var(--text); border-bottom: 2px solid var(--cat-grammar-mark); padding: 0 2px; }
+.bubble.ai .chip-row.is-replies { display: flex !important; }
+
+/* Celular: las 3 tareas siempre visibles, en una fila propia */
+@media (max-width: 720px) {
+    .app-header { height: auto; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; row-gap: 8px; }
+    .mode-nav { order: 10; flex: 1 0 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; overflow: visible; }
+    .mode-pill { height: auto; min-height: 44px; padding: 4px 6px; white-space: normal; line-height: 1.2; text-align: center; font-size: 13px; }
+}
+
+/* ============================================================
+   Tarea 3 · Vocabulario en contexto (dentro del chat)
+   ============================================================ */
+.voc-sample { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 2px 10px; border-radius: 999px; border: 1px dashed var(--text-3); color: var(--text-2); background: var(--surface-2); }
+.voc-reading { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-3); font-size: 15.5px; line-height: 2; }
+.voc-reading p + p { margin-top: 10px; }
+.voc-tok { font: inherit; line-height: inherit; border: 0; background: none; padding: 1px 0; margin: 0; min-height: 24px; color: var(--text); border-radius: 4px; cursor: pointer; }
+.voc-tok:hover { background: var(--surface-2); }
+button.voc-tok:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.voc-tok.is-on { background: var(--cat-vocab-soft); box-shadow: 0 0 0 2px var(--cat-vocab-soft); border-bottom: 3px solid var(--cat-vocab-mark); font-weight: 600; }
+.voc-quote { padding: 10px 14px; border-left: 4px solid var(--text-2); background: var(--surface-3); border-radius: 0 10px 10px 0; font-size: 15px; }
+.voc-quote mark { background: var(--cat-vocab-soft); border-bottom: 3px solid var(--cat-vocab-mark); color: var(--text); padding: 0 2px; }
+.voc-links { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13.5px; }
+.voc-links a { display: inline-flex; align-items: center; gap: 4px; color: var(--text); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.voc-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.voc-cards li { padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-3); font-size: 14px; }
+.voc-cards small { display: block; color: var(--text-3); font-size: 13px; margin-top: 3px; }
+.voc-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.voc-checks li { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.voc-checks li svg { color: var(--red); margin-top: 3px; flex: none; }
+.voc-checks li.is-ok svg { color: var(--cat-clarity); }
+.voc-checks small { display: block; color: var(--text-3); font-size: 13px; }
+.voc-state { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
+.voc-state.is-used { background: var(--cat-clarity-soft); color: var(--cat-clarity); }
+.voc-own { font-size: 13.5px; padding: 6px 10px; border-radius: 8px; background: var(--cat-clarity-soft); }

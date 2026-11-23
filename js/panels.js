@@ -74,9 +74,8 @@
         const mode = D.modes[st.mode];
         const guidedTabs = {
             writing: ['text', 'rules'],
-            conversation: ['scenario', 'vocabulary'],
-            lessons: ['article', 'vocabulary'],
-            questions: ['answers', 'sources']
+            errors: ['errlist', 'rule'],
+            lessons: ['vocabulary']
         };
         const allowed = guidedTabs[st.mode] || [mode.tabs[0].id];
         if (st.detailsLevel === 2) {
@@ -101,12 +100,10 @@
             plan: 'Revisar los pasos de la tarea.',
             path: 'Ver tu ruta y el avance de cada paso.',
             changes: 'Consultar decisiones y comparar versiones.',
-            scenario: 'Cambiar el contexto de la conversación.',
+            errlist: 'Ver tus errores y su estado.',
+            rule: 'Leer la regla del error que practicas.',
             vocabulary: 'Guardar y repasar palabras del contexto.',
             progress: 'Consultar tu avance de aprendizaje.',
-            article: 'Leer el texto y explorar palabras.',
-            answers: 'Revisar respuestas frecuentes.',
-            sources: 'Consultar el origen de una explicación.'
         };
         return descriptions[id] || 'Abrir esta vista de apoyo.';
     }
@@ -309,84 +306,61 @@
         `;
     }
 
-    function renderScenarioPanel() {
-        const st = S.get();
+    /* ---------------- Tarea 2: errores frecuentes ---------------- */
+    function renderErrListPanel() {
+        const E = window.Errors;
+        const gs = E.groups();
         return `
             <div class="panel-head">
-                <div><h3>Escenario</h3><p>Contexto de la conversación</p></div>
-                <span class="paper-tag">Gu et al. · contexto</span>
+                <div><h3>Tus errores</h3><p>Salen de las correcciones que aceptas en tu correo</p></div>
             </div>
-            <div class="stack">
-                ${D.scenarios.map((s) => `
-                    <button class="scenario-card ${st.scenario === s.id ? 'is-active' : ''}" data-action="select-scenario" data-scenario="${s.id}">
-                        <span class="scenario-icon">${(I[s.icon] || I.message)(18)}</span>
-                        <span>
-                            <strong>${s.name}</strong>
-                            <span>${s.goal}</span>
-                        </span>
-                    </button>
-                `).join('')}
-            </div>
-            <div class="panel-note">
-                <strong>Plan de la sesión</strong>
-                <p>${D.scenarios.find((s) => s.id === st.scenario).prompts.length} preguntas · 5–10 minutos · nivel B1–B2.</p>
-            </div>
-        `;
-    }
-
-    function renderVocabularyPanel() {
-        const st = S.get();
-        if (st.mode === 'lessons') return renderSavedWordsPanel();
-        const scenario = D.scenarios.find((s) => s.id === st.scenario);
-        const words = scenario.vocab.map((w, i) => ({ word: w, meaning: ['experiencia', 'fortalezas', 'metas', 'puesto', 'reto', 'trabajo en equipo'][i] || 'palabra clave', example: '' }));
-
-        return `
-            <div class="panel-head">
-                <div><h3>Palabras clave</h3><p>Úsalas en tus respuestas y guárdalas para repasar</p></div>
-                <span class="paper-tag">LightVA · insights</span>
-            </div>
-            <div class="stack">
-                ${words.map((w) => `
-                    <article class="word-card ${st.savedWords.includes(w.word) ? 'is-saved' : ''}">
-                        <div class="word-top">
-                            <strong>${w.word}</strong>
-                            <button class="mini-btn" data-action="save-word" data-word="${w.word}" aria-label="Guardar ${w.word}">${st.savedWords.includes(w.word) ? I.check(13) : I.plus(13)}</button>
-                        </div>
-                        <p>${w.meaning}</p>
-                        ${w.example ? `<p class="muted-text italic">“${w.example}”</p>` : ''}
-                    </article>
-                `).join('')}
-            </div>
-            <p class="panel-note">Guardadas: ${st.savedWords.length || 'ninguna'} · se añaden a tu repaso.</p>
-        `;
-    }
-
-    function renderSavedWordsPanel() {
-        const st = S.get();
-        const saved = D.article.words.filter((w) => st.savedWords.includes(w.word));
-        return `
-            <div class="panel-head">
-                <div><h3>Tus palabras</h3><p>Las que guardas de la lectura, para repasar</p></div>
-            </div>
-            ${saved.length ? `
-                <div class="stack">
-                    ${saved.map((w) => `
-                        <article class="word-card is-saved">
-                            <div class="word-top"><strong>${w.word}</strong></div>
-                            <p>${w.meaning}</p>
-                            <p class="muted-text italic">“${w.example}”</p>
-                        </article>`).join('')}
-                </div>` : `
+            ${gs.length ? E.listHtml(gs) : `
                 <div class="empty-state">
-                    <strong>Todavía no guardas palabras</strong>
-                    <p>Elige una palabra de la lectura y pulsa “Guardar palabra”. Aparecerá aquí para repasarla.</p>
+                    <strong>Todavía no tienes errores guardados</strong>
+                    <p>Acepta una corrección al revisar tu correo, o haz el diagnóstico de 5 oraciones en el chat.</p>
+                </div>`}
+        `;
+    }
+
+    function renderRulePanel() {
+        const st = S.get();
+        const r = st.errRule && window.Exercises.RULES[st.errRule];
+        return `
+            <div class="panel-head">
+                <div><h3>La regla</h3><p>${r ? r.name : 'Elige un error para ver su regla'}</p></div>
+            </div>
+            ${r ? `<p>${r.why}</p>${window.Errors.exHtml(escapeHtml(r.bad), escapeHtml(r.good))}<p class="muted-text">Mirarla durante la práctica cuenta como ayuda solo si pides la pista en el chat.</p>` : ''}
+        `;
+    }
+
+    /* ---------------- Tarea 3: tus palabras (las que registras en el chat) ---------------- */
+    function renderVocabularyPanel() {
+        const words = S.get().vocabWords;
+        return `
+            <div class="panel-head">
+                <div><h3>Tus palabras</h3><p>Las que registras en el chat, con su oración</p></div>
+            </div>
+            ${words.length ? `
+                <div class="stack">
+                    ${words.map((w) => `
+                        <article class="word-card is-saved">
+                            <div class="word-top"><strong lang="en">${escapeHtml(w.word)}</strong><span class="voc-state ${w.practicedAt ? 'is-used' : ''}">${w.practicedAt ? 'Usada' : 'Nueva'}</span></div>
+                            <p>${escapeHtml(w.meaning)}</p>
+                            <p class="muted-text" lang="en">“${escapeHtml(w.sentence)}”</p>
+                            ${w.own ? `<p class="voc-own" lang="en"><span class="sr-only">Tu oración: </span>${escapeHtml(w.own)}</p>` : ''}
+                        </article>`).join('')}
+                </div>
+                <div class="panel-actions"><button class="btn" data-action="vocab-csv">${I.export(14)} Descargar (CSV)</button></div>` : `
+                <div class="empty-state">
+                    <strong>Todavía no tienes palabras</strong>
+                    <p>Pega un texto en el chat y marca las palabras que no conozcas. Aquí aparecerán con su significado.</p>
                 </div>`}
         `;
     }
 
     function renderProgressPanel() {
         const st = S.get();
-        const saved = st.savedWords.length;
+        const saved = st.vocabWords.length;
         return `
             <div class="panel-head">
                 <div><h3>Tu progreso</h3><p>Esta semana</p></div>
@@ -412,71 +386,6 @@
         `;
     }
 
-    function renderArticlePanel() {
-        const st = S.get();
-        const selected = st.selectedWord ? D.article.words.find((w) => w.word === st.selectedWord) : null;
-        return `
-            <div class="panel-head">
-                <div><h3>${D.article.title}</h3><p>${D.article.source}</p></div>
-                <span class="paper-tag">LightVA · data lens</span>
-            </div>
-            <div class="article-box">
-                ${D.article.paragraphs.map((p, pi) => `<p>${pi === 0 ? p : p}</p>`).join('')}
-            </div>
-            <p class="panel-note">Selecciona una palabra del artículo para ver su significado en contexto.</p>
-            <div class="word-picker">
-                ${D.article.words.map((w) => `<button class="word-chip ${st.selectedWord === w.word ? 'is-active' : ''}" data-action="select-word" data-word="${w.word}">${w.word}</button>`).join('')}
-            </div>
-            ${selected ? `
-                <div class="word-detail">
-                    <div class="word-detail-head"><strong>${selected.word}</strong><span>Significado en este artículo</span></div>
-                    <p><b>Significado:</b> ${selected.meaning}</p>
-                    <div class="word-example featured"><span>En el artículo</span>“${selected.example}”</div>
-                    <div class="word-extra-example"><span>Otro ejemplo</span>“${selected.examples[0]}”</div>
-                    <p class="word-use"><b>Cómo se usa:</b> ${selected.use}</p>
-                    <div class="word-detail-actions">
-                        <button class="btn btn-primary" data-action="open-word-examples" data-word="${selected.word}">Ver más ejemplos</button>
-                        <button class="btn" data-action="save-word" data-word="${selected.word}">${I.plus(14)} Guardar palabra</button>
-                    </div>
-                </div>
-            ` : ''}
-        `;
-    }
-
-    function renderAnswersPanel() {
-        const msgs = S.get().messages.questions;
-        const pairs = [];
-        msgs.forEach((m, i) => {
-            if (m.role === 'user' && msgs[i + 1] && msgs[i + 1].role === 'ai') pairs.push({ q: m.text, a: msgs[i + 1].text });
-        });
-        return `
-            <div class="panel-head">
-                <div><h3>Tus dudas</h3><p>Lo que ya resolviste en esta sesión</p></div>
-            </div>
-            ${pairs.length ? `
-                <div class="stack">
-                    ${pairs.map((x) => `<article class="qa-card"><strong>${escapeHtml(x.q)}</strong><p>${escapeHtml(x.a)}</p></article>`).join('')}
-                </div>` : `
-                <div class="empty-state">
-                    <strong>Aún no hay dudas resueltas</strong>
-                    <p>Escribe tu duda en el chat o prueba una de las preguntas rápidas. La respuesta quedará guardada aquí.</p>
-                </div>`}
-        `;
-    }
-
-    function renderSourcesPanel() {
-        return `
-            <div class="panel-head">
-                <div><h3>Fuentes</h3><p>De dónde sale cada respuesta</p></div>
-                <span class="paper-tag">WoZ · rigor</span>
-            </div>
-            <div class="stack">
-                <div class="source-card"><strong>Cambridge Grammar</strong><span>Uso de “agree” y verbos estativos.</span><span class="source-tag">verificado</span></div>
-                <div class="source-card"><strong>Longman Dictionary</strong><span>Matices entre “important” y “relevant”.</span><span class="source-tag">verificado</span></div>
-                <div class="source-card"><strong>British Council</strong><span>Pronunciación de “comfortable” en inglés británico.</span><span class="source-tag">mock</span></div>
-            </div>
-        `;
-    }
 
     function renderAsideContent() {
         const tab = S.get().tab;
@@ -489,15 +398,11 @@
             plan: renderPlanPanel,
             path: renderPathPanel,
             changes: renderChangesPanel,
-            scenario: renderScenarioPanel,
+            errlist: renderErrListPanel,
+            rule: renderRulePanel,
             vocabulary: renderVocabularyPanel,
-            progress: renderProgressPanel,
-            article: renderArticlePanel,
-            answers: renderAnswersPanel,
-            sources: renderSourcesPanel
+            progress: renderProgressPanel
         };
-        if (mode === 'lessons' && tab === 'vocabulary') return renderVocabularyPanel();
-        if (mode === 'conversation' && tab === 'vocabulary') return renderVocabularyPanel();
         return (map[tab] || renderTextPanel)();
     }
 
@@ -505,10 +410,9 @@
     function historyGroupsHtml() {
         const st = S.get();
         const groups = [
-            { mode: 'writing', label: 'Revisión de correo', icon: 'doc' },
-            { mode: 'conversation', label: 'Práctica de conversación', icon: 'message' },
-            { mode: 'lessons', label: 'Vocabulario en contexto', icon: 'book' },
-            { mode: 'questions', label: 'Dudas rápidas', icon: 'search' }
+            { mode: 'writing', label: 'Redacción asistida', icon: 'doc' },
+            { mode: 'errors', label: 'Errores frecuentes', icon: 'tag' },
+            { mode: 'lessons', label: 'Vocabulario en contexto', icon: 'book' }
         ];
         const currentMode = st.historyMode || st.mode;
         const orderedGroups = groups.slice().sort((a, b) => (a.mode === currentMode ? -1 : b.mode === currentMode ? 1 : 0));

@@ -20,6 +20,7 @@ Best regards`;
             label: 'Gramática',
             title: 'Concordancia verbal',
             correctionNo: 1,
+            practice: 'agree',
             before: 'I am agree',
             after: 'I agree',
             hint: 'Mira “I am agree”. ¿Necesita “agree” el auxiliar “am” para funcionar?',
@@ -55,6 +56,7 @@ Best regards`;
             label: 'Tono',
             title: 'Petición demasiado directa',
             correctionNo: 3,
+            practice: 'direct',
             before: 'I want you give me more time',
             after: 'Could you please give me more time?',
             hint: 'Mira “I want you give me more time”. Para escribirle a una profesora, ¿suena lo bastante formal?',
@@ -160,18 +162,17 @@ Best regards`;
     /* ---------- Sesiones recientes ---------- */
     const sessions = [
         { id: 's1', title: 'Correo: prórroga', device: 'monitor', meta: 'Hoy 19:40', mode: 'writing', active: true },
-        { id: 's2', title: 'Conversación: entrevista', device: 'phone', meta: 'Ayer 18:05', mode: 'conversation', active: false },
-        { id: 's3', title: 'Artículo: vocabulario', device: 'monitor', meta: 'Lun 12:30', mode: 'lessons', active: false },
-        { id: 's4', title: 'Presentación formal', device: 'monitor', meta: '26 oct', mode: 'conversation', scenario: 'presentation', active: false }
+        { id: 's2', title: 'Práctica: mis errores', device: 'phone', meta: 'Ayer 18:05', mode: 'errors', active: false },
+        { id: 's3', title: 'Artículo: vocabulario', device: 'monitor', meta: 'Lun 12:30', mode: 'lessons', active: false }
     ];
 
     /* ---------- Modos ---------- */
     const modes = {
         writing: {
-            label: 'Revisión de correo',
-            title: 'Revisión de un correo formal',
+            label: 'Redacción asistida',
+            title: 'Redacción asistida de un correo formal',
             subtitle: 'Correo · solicitud de prórroga',
-            stages: ['Planificar', 'Borrador', 'Revisar', 'Cerrar'],
+            stages: ['Planificar', 'Escribir', 'Revisar', 'Enviar'],
             activeStage: 2,
             tabs: [
                 { id: 'text', label: 'Tu texto', paper: 'WaitGPT · data lens' },
@@ -182,55 +183,33 @@ Best regards`;
                 { id: 'changes', label: 'Cambios', paper: 'WaitGPT · granular' }
             ],
             placeholder: 'Pregunta algo sobre tu correo o pide una pista…',
-            modeHint: 'Modo: Revisión de correo'
+            modeHint: 'Modo: Redacción asistida'
         },
-        conversation: {
-            label: 'Práctica de conversación',
-            title: 'Práctica de conversación escrita',
-            subtitle: 'Entrevista de trabajo · inglés B1–B2',
-            stages: ['Preparar', 'Hablar', 'Analizar', 'Repetir'],
-            activeStage: 1,
+        errors: {
+            label: 'Errores frecuentes',
+            title: 'Práctica de errores frecuentes',
+            subtitle: 'Tus errores · oraciones nuevas para practicar',
+            stages: ['Elegir', 'Entender', 'Practicar', 'Evaluar'],
+            activeStage: 0,
             tabs: [
-                { id: 'vocabulary', label: 'Palabras clave', paper: 'LightVA · insights' },
-                { id: 'scenario', label: 'Escenario', paper: 'Gu et al. · contexto' },
-                { id: 'progress', label: 'Progreso', paper: 'WoZ · rigor' },
-                { id: 'path', label: 'Ruta', paper: 'LightVA · task flow' },
-                { id: 'changes', label: 'Cambios', paper: 'WaitGPT · granular' }
+                { id: 'errlist', label: 'Tus errores', paper: 'WaitGPT · granular' },
+                { id: 'rule', label: 'La regla', paper: 'Gu et al. · procedimiento' }
             ],
-            placeholder: 'Escribe tu respuesta en inglés o pide una pista…',
-            modeHint: 'Modo: Práctica de conversación'
+            placeholder: 'Escribe tu respuesta…',
+            modeHint: 'Modo: Errores frecuentes'
         },
         lessons: {
             label: 'Vocabulario en contexto',
-            title: 'Vocabulario en contexto desde un artículo',
+            title: 'Adquisición de vocabulario contextualizado',
             subtitle: 'Artículo corto · vocabulario en contexto',
-            stages: ['Leer', 'Descubrir', 'Registrar', 'Practicar'],
-            activeStage: 1,
-            tabs: [
-                { id: 'vocabulary', label: 'Tus palabras', paper: 'Kazemitabaar · side query' },
-                { id: 'article', label: 'Artículo', paper: 'LightVA · data lens' },
-                { id: 'progress', label: 'Progreso', paper: 'WoZ · rigor' },
-                { id: 'plan', label: 'Plan', paper: 'LightVA · plan' },
-                { id: 'changes', label: 'Cambios', paper: 'WaitGPT · granular' }
-            ],
-            placeholder: 'Pega tu lectura y escribe la palabra que necesitas…',
-            modeHint: 'Modo: Vocabulario en contexto'
-        },
-        questions: {
-            label: 'Dudas rápidas',
-            title: 'Dudas rápidas',
-            subtitle: 'Consultas puntuales de gramática y vocabulario',
-            stages: ['Preguntar', 'Explorar', 'Aplicar', 'Cerrar'],
+            stages: ['Leer y detectar', 'Traducir en contexto', 'Registrar', 'Practicar'],
             activeStage: 0,
             tabs: [
-                { id: 'answers', label: 'Tus dudas', paper: 'Gu et al. · workflow' },
-                { id: 'sources', label: 'Fuentes', paper: 'WoZ · rigor' },
-                { id: 'progress', label: 'Progreso', paper: 'LightVA · insights' },
-                { id: 'plan', label: 'Plan', paper: 'LightVA · plan' },
-                { id: 'changes', label: 'Cambios', paper: 'WaitGPT · granular' }
+                { id: 'vocabulary', label: 'Tus palabras', paper: 'Kazemitabaar · side query' },
+                { id: 'progress', label: 'Progreso', paper: 'WoZ · rigor' }
             ],
-            placeholder: 'Escribe una duda rápida de inglés…',
-            modeHint: 'Modo: Dudas rápidas'
+            placeholder: 'Pega tu texto o escribe tu respuesta…',
+            modeHint: 'Modo: Vocabulario en contexto'
         }
     };
 
@@ -253,76 +232,9 @@ Best regards`;
                 ]
             }
         ],
-        conversation: [
-            {
-                role: 'ai',
-                label: 'ENTREVISTADORA IA · CONVERSACIÓN',
-                text: 'Good morning! Thanks for coming. To start, could you tell me a little about yourself and why you are interested in this position?',
-                chips: [
-                    { icon: 'lightbulb', text: 'Pista: usa “I have experience in…”', kind: 'info' },
-                    { icon: 'message', text: 'Responde por escrito en inglés', kind: 'info' }
-                ]
-            }
-        ],
-        lessons: [
-            {
-                role: 'ai',
-                label: 'TUTOR IA · LECTURA',
-                text: 'Lee el artículo y selecciona una palabra que no conozcas. Yo te ayudo con el significado en contexto, sin darte la respuesta completa.',
-                chips: [
-                    { icon: 'book', text: 'Artículo: The future of remote work', kind: 'info' },
-                    { icon: 'lightbulb', text: 'Toca una palabra resaltada', kind: 'info' }
-                ]
-            }
-        ],
-        questions: [
-            {
-                role: 'ai',
-                label: 'TUTOR IA · DUDAS',
-                text: 'Pregúntame lo que quieras sobre gramática, vocabulario o pronunciación. Te responderé con una explicación corta y un ejemplo.',
-                chips: [
-                    { icon: 'message', text: '¿Cuándo uso “agree” sin “am”?', kind: 'info' },
-                    { icon: 'book', text: '¿Diferencia entre “important” y “relevant”?', kind: 'info' },
-                    { icon: 'mic', text: '¿Cómo suena “comfortable”?', kind: 'info' }
-                ]
-            }
-        ]
+        errors: [],
+        lessons: []
     };
-
-    /* ---------- Escenarios de conversación ---------- */
-    const scenarios = [
-        {
-            id: 'interview', name: 'Entrevista de trabajo', icon: 'user',
-            goal: 'Responder 4 preguntas y justificar tu experiencia.',
-            prompts: [
-                'Could you tell me a little about yourself?',
-                'What are your main strengths for this position?',
-                'Tell me about a challenge you solved.',
-                'Where do you see yourself in three years?'
-            ],
-            vocab: ['experience', 'strengths', 'goals', 'position', 'challenge', 'teamwork']
-        },
-        {
-            id: 'cafe', name: 'Café con un amigo', icon: 'message',
-            goal: 'Mantener una conversación informal de 5 intercambios.',
-            prompts: [
-                'How was your weekend?',
-                'What do you usually do to relax?',
-                'Have you seen any good series lately?'
-            ],
-            vocab: ['weekend', 'recommend', 'favorite', 'relax', 'catch up']
-        },
-        {
-            id: 'presentation', name: 'Presentación formal', icon: 'layers',
-            goal: 'Presentar un proyecto en 3 minutos.',
-            prompts: [
-                'Good morning. Could you introduce your project?',
-                'What is the main objective?',
-                'How would you summarize the results?'
-            ],
-            vocab: ['introduce', 'objective', 'summary', 'results', 'team', 'impact']
-        }
-    ];
 
     /* ---------- Artículo de la lección ---------- */
     const article = {
@@ -362,61 +274,13 @@ Best regards`;
     };
 
 
-    /* ---------- Guía visual de modos secundarios ---------- */
-    const modeGuides = {
-        conversation: {
-            title: 'Cómo funciona esta práctica',
-            lead: 'Una sesión corta de speaking con apoyo visible, no una conversación infinita.',
-            steps: [
-                { n: '1', title: 'Elige el escenario', text: 'Entrevista, café o presentación formal.' },
-                { n: '2', title: 'Responde', text: 'Escribe tu respuesta en inglés.' },
-                { n: '3', title: 'Avanza', text: 'Pide una pista o pasa a la siguiente pregunta.' }
-            ]
-        },
-        lessons: {
-            title: 'Cómo funciona esta lección',
-            lead: 'Lectura corta con vocabulario en contexto y una meta semanal visible.',
-            steps: [
-                { n: '1', title: 'Lee', text: 'Un artículo breve de nivel B1–B2.' },
-                { n: '2', title: 'Descubre', text: 'Toca una palabra para ver su sentido.' },
-                { n: '3', title: 'Registra', text: 'Guarda la palabra y crea tu ejemplo.' }
-            ]
-        },
-        questions: {
-            title: 'Cómo funciona esta vista',
-            lead: 'Dudas puntuales con explicación corta, fuente y aplicación inmediata.',
-            steps: [
-                { n: '1', title: 'Pregunta', text: 'Escribe una duda concreta de inglés.' },
-                { n: '2', title: 'Revisa', text: 'Mira la regla, el ejemplo y la fuente.' },
-                { n: '3', title: 'Aplica', text: 'Convierte la respuesta en un ejercicio.' }
-            ]
-        }
-    };
-
     /* ---------- Respuestas mock del chat ---------- */
     const replies = {
         writing: [
             { match: /pista|ayuda|hint/i, text: 'Pista: fíjate primero en “I am agree”. En inglés, “agree” ya es un verbo, así que no necesita “am”. ¿Quieres ver la regla completa?', chips: [{ icon: 'book', text: 'Ver regla', action: 'open-rule-r1', kind: 'info' }] },
             { match: /sinónim|vocabul|important/i, text: 'Para “important” puedes usar “relevant” si hablas de pertinencia, o “demanding” si hablas de una tarea exigente. ¿Cuál encaja mejor con tu frase?', chips: [{ icon: 'search', text: 'Buscar sinónimos', action: 'open-synonyms', kind: 'info' }] },
             { match: /regla|por qué|porque/i, text: 'La regla es simple: “agree” no lleva auxiliar. Se conjuga como cualquier verbo: I agree, she agrees, we agreed. ¿Quieres un ejemplo en tu correo?', chips: [{ icon: 'book', text: 'Ver ejemplo', action: 'open-rule-r1', kind: 'info' }] },
-            { match: /pronunci|suena|audio/i, text: 'Pronuncia “agree” con el acento en la segunda sílaba: /əˈɡriː/. Intenta decir “I agree” tres veces en voz alta.', chips: [{ icon: 'mic', text: 'Grabar intento', action: 'toggle-mic', kind: 'info' }] },
             { match: /tono|formal|profesor/i, text: 'Para una profesora, cambia “I want you to…” por “Could you please…?”. Mantiene tu petición, pero suena más cortés.', chips: [{ icon: 'message', text: 'Editar criterio de tono', action: 'open-criteria', kind: 'info' }] }
-        ],
-        conversation: [
-            { match: /pista|ayuda|hint/i, text: 'Pista: empieza con una estructura segura. “I have experience in…” + un ejemplo concreto. No necesitas una respuesta perfecta, solo clara.', chips: [{ icon: 'book', text: 'Ver vocabulario', action: 'open-vocabulary', kind: 'info' }] },
-            { match: /nervios|miedo|no sé/i, text: 'Respira. Puedes ganar tiempo con “That’s a good question. Let me think for a second.” Luego responde con una idea y un ejemplo.', chips: [{ icon: 'mic', text: 'Practicar en voz alta', action: 'toggle-mic', kind: 'info' }] },
-            { match: /.*/, text: 'Good answer. Ahora intenta añadir una razón: “because I enjoy…” o “for example, in my last project…”. Así tu respuesta gana detalle.', chips: [{ icon: 'arrowRight', text: 'Siguiente pregunta', action: 'next-prompt', kind: 'info' }] }
-        ],
-        lessons: [
-            { match: /productiv/i, text: '“Productive” significa que produces buenos resultados. En el artículo: “employees can be productive at home”. ¿Puedes escribir una oración con “productive”?', chips: [{ icon: 'plus', text: 'Guardar palabra', action: 'save-word-productive', kind: 'info' }] },
-            { match: /flexib/i, text: '“Flexibility” es la capacidad de adaptarse. Se usa mucho para horarios: “flexible hours”. En español sería “flexibilidad”.', chips: [{ icon: 'plus', text: 'Guardar palabra', action: 'save-word-flexibility', kind: 'info' }] },
-            { match: /.*/, text: 'Buena elección. Para entender una palabra en contexto, mira la oración completa antes de traducirla. ¿Quieres que te dé una pista o el significado directo?', chips: [{ icon: 'lightbulb', text: 'Dame una pista', action: 'hint-word', kind: 'info' }] }
-        ],
-        questions: [
-            { match: /agree/i, text: '“Agree” ya es un verbo, así que no lleva “am”: I agree, she agrees. Error típico: “I am agree”. Correcto: “I agree with you”.', chips: [{ icon: 'book', text: 'Ver regla', action: 'open-rule-r1', kind: 'info' }] },
-            { match: /important|relevant/i, text: '“Important” indica valor general; “relevant” indica pertinencia. Si hablas de un plazo que afecta tu nota, “relevant” es más preciso.', chips: [{ icon: 'book', text: 'Ver regla', action: 'open-rule-r2', kind: 'info' }] },
-            { match: /pronunci|comfortable|suena/i, text: '“Comfortable” se pronuncia /ˈkʌmftəbl/, con tres sílabas. No digas “com-for-ta-ble”: suena antinatural.', chips: [{ icon: 'mic', text: 'Grabar intento', action: 'toggle-mic', kind: 'info' }] },
-            { match: /.*/, text: 'Buena pregunta. Te doy una explicación corta y un ejemplo para que puedas aplicarlo hoy mismo. ¿Quieres que lo convierta en ejercicio?', chips: [{ icon: 'sparkles', text: 'Crear ejercicio', action: 'create-exercise', kind: 'info' }] }
         ]
     };
 
@@ -432,9 +296,7 @@ Best regards`;
         sessions,
         modes,
         initialMessages,
-        scenarios,
         article,
-        modeGuides,
         replies,
         wizardProtocol: [
             { label: 'Regla 1', text: 'El wizard nunca corrige sin mostrar el criterio y el tipo de control.' },

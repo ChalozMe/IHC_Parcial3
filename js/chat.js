@@ -44,10 +44,12 @@
         }
         const bar = actionBarHtml(msg, idx);
         return `
-            <div class="bubble ai ${bar ? 'has-actions' : ''} ${msg.error ? 'error' : ''}">
+            <div class="bubble ai ${bar ? 'has-actions' : ''} ${msg.error ? 'error' : ''} ${msg.tone === 'ok' ? 'is-ok' : ''}">
                 <div class="bubble-label">${msg.error ? I.alert(14) + ' ' : ''}${escapeHtml(msg.label || 'TUTOR IA')}</div>
                 <p>${escapeHtml(msg.text)}</p>
-                ${msg.chips && msg.chips.length ? `<div class="chip-row">${msg.chips.map(chipHtml).join('')}</div>` : ''}
+                ${msg.html ? `<div class="bubble-card">${msg.html}</div>` : ''}
+                ${msg.dyn === 'reading' ? `<div class="bubble-card">${window.Vocab.readingHtml(isLiveReading(idx))}</div>` : ''}
+                ${msg.chips && msg.chips.length ? `<div class="chip-row ${msg.replies ? 'is-replies' : ''}">${msg.chips.map(chipHtml).join('')}</div>` : ''}
                 ${bar}
             </div>`;
     }
@@ -73,103 +75,28 @@
         `;
     }
 
-    function conversationChat() {
+    function errorsChat() {
         const st = S.get();
-        const scenario = D.scenarios.find((s) => s.id === st.scenario) || D.scenarios[0];
+        if (!st.messages.errors.length) window.Errors.intro();
         return `
-            <div class="scenario-strip" role="group" aria-label="Escenario activo">
-                ${D.scenarios.map((s) => `
-                    <button class="scenario-chip ${s.id === st.scenario ? 'is-active' : ''}" data-action="select-scenario" data-scenario="${s.id}">
-                        ${(I[s.icon] || I.message)(13)} ${s.name}
-                    </button>
-                `).join('')}
-                <button class="text-btn scenario-next" data-action="next-prompt">Siguiente pregunta ${I.arrowRight(13)}</button>
-            </div>
-            ${st.messages.conversation.map((m, i) => messageHtml(m, i)).join('')}
-            ${st.typing ? typingHtml() : ''}
+            ${st.messages.errors.map((m, i) => messageHtml(m, i)).join('')}
         `;
+    }
+
+    /* La lectura solo se puede tocar en su último mensaje y mientras marcas palabras */
+    function isLiveReading(idx) {
+        const st = S.get();
+        if (st.mode !== 'lessons' || !st.vocab || st.vocab.stage !== 'mark') return false;
+        const list = st.messages.lessons;
+        for (let i = list.length - 1; i >= 0; i -= 1) if (list[i].dyn === 'reading') return i === idx;
+        return false;
     }
 
     function lessonsChat() {
         const st = S.get();
-        const selected = st.selectedWord ? D.article.words.find((w) => w.word === st.selectedWord) : null;
+        if (!st.messages.lessons.length) window.Vocab.intro();
         return `
-            <div class="reading-card">
-                <div class="section-head">
-                    <div class="section-title-wrap">
-                        <h4>${D.article.title}</h4>
-                        <span class="paper-tag">LightVA · data lens</span>
-                    </div>
-                    <span class="muted-text">${D.article.source}</span>
-                </div>
-                ${D.article.paragraphs.map((p) => `<p>${p}</p>`).join('')}
-                <div class="word-picker">
-                    ${D.article.words.map((w) => `<button class="word-chip ${st.selectedWord === w.word ? 'is-active' : ''}" data-action="select-word" data-word="${w.word}">${w.word}</button>`).join('')}
-                </div>
-                ${selected ? `
-                    <div class="inline-word-detail">
-                        <div class="word-detail-head"><strong>${selected.word}</strong><span>Significado en este artículo</span></div>
-                        <p><b>Significado:</b> ${selected.meaning}</p>
-                        <div class="word-example featured"><span>En el artículo</span>“${selected.example}”</div>
-                        <div class="word-extra-example"><span>Otro ejemplo</span>“${selected.examples[0]}”</div>
-                        <p class="word-use"><b>Cómo se usa:</b> ${selected.use}</p>
-                        <div class="word-detail-actions">
-                            <button class="btn btn-primary" data-action="open-word-examples" data-word="${selected.word}">Ver más ejemplos</button>
-                            <button class="btn" data-action="save-word" data-word="${selected.word}">${I.plus(14)} Guardar palabra</button>
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-            <div class="reading-prompt-card">
-                <div><h4>¿Tienes otra lectura?</h4><p>Puedes pegarla en el chat y escribir la palabra que necesitas entender. El tutor usará el contexto para explicarla.</p></div>
-                <div class="prompt-example">“Te paso esta lectura. ¿Qué significa <b>dedicated</b> aquí? Dame dos ejemplos en inglés y dime cuándo se usa.”</div>
-                <button class="btn btn-ghost" data-action="use-reading-prompt">Escribir mi consulta</button>
-            </div>
             ${st.messages.lessons.map((m, i) => messageHtml(m, i)).join('')}
-            ${st.typing ? typingHtml() : ''}
-        `;
-    }
-
-    function modeGuide(mode) {
-        const guide = D.modeGuides[mode];
-        if (!guide) return '';
-        const papers = {
-            conversation: ['Gu et al. · workflow', 'LightVA · task flow', 'Yang et al. · WoZ', 'WaitGPT · granularidad'],
-            lessons: ['LightVA · data lens', 'Kazemitabaar · side query', 'Yang et al. · WoZ', 'WaitGPT · cobertura'],
-            questions: ['Gu et al. · workflow', 'Yang et al. · rigor', 'LightVA · insights', 'WaitGPT · exportar']
-        }[mode] || [];
-        return `
-            <section class="mode-guide-card">
-                <div class="section-head">
-                    <div class="section-title-wrap">
-                        <h4>${guide.title}</h4>
-                        <span class="paper-tag">Demo · apoyo visual</span>
-                    </div>
-                </div>
-                <p class="muted-text">${guide.lead}</p>
-                <div class="guide-grid">
-                    ${guide.steps.map((s) => `
-                        <div class="guide-step">
-                            <span class="guide-num">${s.n}</span>
-                            <div><strong>${s.title}</strong><p>${s.text}</p></div>
-                        </div>`).join('')}
-                </div>
-                <div class="guide-papers">${papers.map((p) => `<span class="paper-tag">${p}</span>`).join('')}</div>
-            </section>
-        `;
-    }
-
-    function questionsChat() {
-        const st = S.get();
-        return `
-            ${st.messages.questions.map((m, i) => messageHtml(m, i)).join('')}
-            <div class="quick-prompts">
-                <span class="muted-text">Prueba una pregunta rápida:</span>
-                <button class="chip" data-action="quick-question" data-text="¿Cuándo uso agree sin am?">${I.message(12)} ¿Cuándo uso “agree” sin “am”?</button>
-                <button class="chip" data-action="quick-question" data-text="¿Diferencia entre important y relevant?">${I.book(12)} important vs relevant</button>
-                <button class="chip" data-action="quick-question" data-text="¿Cómo suena comfortable?">${I.mic(12)} comfortable</button>
-            </div>
-            ${st.typing ? typingHtml() : ''}
         `;
     }
 
@@ -233,7 +160,7 @@
     }
 
     function replyFor(mode, text) {
-        const list = D.replies[mode] || D.replies.questions;
+        const list = D.replies[mode] || D.replies.writing;
         const found = list.find((r) => r.match.test(text));
         return found || list[list.length - 1];
     }
@@ -257,7 +184,7 @@
         pending = { mode, timer: window.setTimeout(() => {
             pending = null;
             const reply = replyFor(mode, text);
-            const label = { writing: 'TUTOR IA · REDACCIÓN', conversation: 'ENTREVISTADORA IA · CONVERSACIÓN', lessons: 'TUTOR IA · LECTURA', questions: 'TUTOR IA · DUDAS' }[mode];
+            const label = 'TUTOR IA · REDACCIÓN';
             S.get().messages[mode].push({ role: 'ai', label, text: reply.text, chips: reply.chips || [], generated: true });
             S.set({ typing: false });
             announce(reply.text);
@@ -272,9 +199,8 @@
             const st = S.get();
             let html = '';
             if (st.mode === 'writing') html = writingChat();
-            else if (st.mode === 'conversation') html = conversationChat();
-            else if (st.mode === 'lessons') html = lessonsChat();
-            else html = questionsChat();
+            else if (st.mode === 'errors') html = errorsChat();
+            else html = lessonsChat();
             el.innerHTML = html;
             this.renderSideQuery();
         },
@@ -286,6 +212,17 @@
             if (scroll) requestAnimationFrame(() => { scroll.scrollTop = scroll.scrollHeight; });
         },
 
+        /* Deja un texto en el campo de mensaje para que la persona lo edite */
+        fill(text) {
+            window.setTimeout(() => {
+                const input = document.getElementById('chat-input');
+                if (!input) return;
+                input.value = text;
+                input.dispatchEvent(new Event('input'));
+                input.focus();
+            }, 0);
+        },
+
         scrollToTop() {
             const scroll = document.getElementById('chat-scroll');
             if (scroll) requestAnimationFrame(() => { scroll.scrollTop = 0; });
@@ -295,6 +232,8 @@
             const st = S.get();
             const clean = String(text || '').trim();
             if (!clean || st.typing) return;
+            if (st.mode === 'errors') { window.Errors.handle(clean); this.scrollToBottom(); return; }
+            if (st.mode === 'lessons') { window.Vocab.handle(clean); this.scrollToBottom(); return; }
             st.messages[st.mode].push({ role: 'user', text: clean });
             generate(st.mode, clean);
         },
