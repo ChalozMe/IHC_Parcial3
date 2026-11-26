@@ -162,18 +162,18 @@ Best regards`;
     /* ---------- Sesiones recientes ---------- */
     const sessions = [
         { id: 's1', title: 'Correo: prórroga', device: 'monitor', meta: 'Hoy 19:40', mode: 'writing', active: true },
-        { id: 's2', title: 'Práctica: mis errores', device: 'phone', meta: 'Ayer 18:05', mode: 'errors', active: false },
-        { id: 's3', title: 'Artículo: vocabulario', device: 'monitor', meta: 'Lun 12:30', mode: 'lessons', active: false }
+        { id: 's2', title: 'Revisión: mi cuento', device: 'phone', meta: 'Ayer 18:05', mode: 'errors', active: false },
+        { id: 's3', title: 'Lectura: trabajo remoto', device: 'monitor', meta: 'Lun 12:30', mode: 'lessons', active: false }
     ];
 
     /* ---------- Modos ---------- */
     const modes = {
         writing: {
-            label: 'Redacción asistida',
-            title: 'Redacción asistida de un correo formal',
-            subtitle: 'Correo · solicitud de prórroga',
-            stages: ['Planificar', 'Escribir', 'Revisar', 'Enviar'],
-            activeStage: 2,
+            label: 'Producir',
+            title: '0.2 Producir un texto en inglés',
+            subtitle: 'Correo, cuento u otro texto',
+            stages: ['Definir', 'Preparar', 'Organizar', 'Redactar', 'Versión final'],
+            activeStage: 0,
             tabs: [
                 { id: 'text', label: 'Tu texto', paper: 'WaitGPT · data lens' },
                 { id: 'rules', label: 'Reglas', paper: 'Gu et al. · procedimiento' },
@@ -182,47 +182,49 @@ Best regards`;
                 { id: 'path', label: 'Ruta', paper: 'LightVA · task flow' },
                 { id: 'changes', label: 'Cambios', paper: 'WaitGPT · granular' }
             ],
-            placeholder: 'Pregunta algo sobre tu correo o pide una pista…',
-            modeHint: 'Modo: Redacción asistida'
+            placeholder: 'Escribe tus ideas, tu borrador o una pregunta…',
+            modeHint: 'Modo: Producir'
         },
         errors: {
-            label: 'Errores frecuentes',
-            title: 'Práctica de errores frecuentes',
-            subtitle: 'Tus errores · oraciones nuevas para practicar',
-            stages: ['Elegir', 'Entender', 'Practicar', 'Evaluar'],
+            label: 'Revisar',
+            title: '0.3 Revisar un texto en inglés',
+            subtitle: 'Tu texto · registro de errores',
+            stages: ['Preparar', 'Identificar', 'Explicar y aplicar', 'Registrar', 'Comprobar'],
             activeStage: 0,
             tabs: [
-                { id: 'errlist', label: 'Tus errores', paper: 'WaitGPT · granular' },
+                { id: 'rtext', label: 'Tu texto', paper: '' },
+                { id: 'errlist', label: 'Tu registro', paper: 'WaitGPT · granular' },
                 { id: 'rule', label: 'La regla', paper: 'Gu et al. · procedimiento' }
             ],
-            placeholder: 'Escribe tu respuesta…',
-            modeHint: 'Modo: Errores frecuentes'
+            placeholder: 'Pega tu texto o escribe tu respuesta…',
+            modeHint: 'Modo: Revisar'
         },
         lessons: {
-            label: 'Vocabulario en contexto',
-            title: 'Adquisición de vocabulario contextualizado',
-            subtitle: 'Artículo corto · vocabulario en contexto',
-            stages: ['Leer y detectar', 'Traducir en contexto', 'Registrar', 'Practicar'],
+            label: 'Comprender',
+            title: '0.1 Comprender un texto en inglés',
+            subtitle: 'Tu texto · lectura guiada',
+            stages: ['Leer', 'Ideas principales', 'Vocabulario', 'Gramática', 'Comprobar'],
             activeStage: 0,
             tabs: [
+                { id: 'reading', label: 'Tu lectura', paper: '' },
                 { id: 'vocabulary', label: 'Tus palabras', paper: 'Kazemitabaar · side query' },
                 { id: 'progress', label: 'Progreso', paper: 'WoZ · rigor' }
             ],
             placeholder: 'Pega tu texto o escribe tu respuesta…',
-            modeHint: 'Modo: Vocabulario en contexto'
+            modeHint: 'Modo: Comprender'
         }
     };
 
     /* ---------- Mensajes iniciales por modo ---------- */
-    const initialMessages = {
-        writing: [
+    /* Correo de ejemplo: solo aparece si la persona lo pide ("Ver un correo de ejemplo") */
+    const writingExample = [
             {
                 role: 'user',
                 text: 'Revisa mi correo para pedir una prórroga. Por ahora solo dame pistas y déjame verificar.'
             },
             {
                 role: 'ai',
-                label: 'TUTOR IA · REDACCIÓN',
+                label: 'TUTOR IA · PRODUCIR',
                 text: 'Terminé de revisar tu correo y marqué 4 cosas. Empecemos por la primera; tú decides qué aceptar.',
                 chips: [
                     { icon: 'alert', text: 'Gramática: 1', kind: 'grammar' },
@@ -231,7 +233,10 @@ Best regards`;
                     { icon: 'sparkles', text: 'Claridad: 1', kind: 'clarity' }
                 ]
             }
-        ],
+        ];
+
+    const initialMessages = {
+        writing: [],
         errors: [],
         lessons: []
     };
@@ -296,6 +301,7 @@ Best regards`;
         sessions,
         modes,
         initialMessages,
+        writingExample,
         article,
         replies,
         wizardProtocol: [

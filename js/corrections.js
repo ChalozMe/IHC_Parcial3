@@ -189,7 +189,7 @@
                     <div class="insight-actions">
                         <button class="btn btn-primary" data-action="copy-final">${I.copy(14)} Copiar correo final</button>
                         <button class="btn" data-action="set-stage" data-stage="3">Ir a Cerrar ${I.arrowRight(14)}</button>
-                        <button class="text-btn" data-action="open-export">${I.export(14)} Exportar resumen</button>
+                        <button class="text-btn" data-action="open-export">${I.export(14)} Resumen de tus cambios</button>
                     </div>
                 </div>
             </section>

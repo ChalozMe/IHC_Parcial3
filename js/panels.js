@@ -64,7 +64,7 @@
                 <span><b class="legend-sample hl-grammar">ab</b>Gramática</span>
                 <span><b class="legend-sample hl-vocab">ab</b>Vocabulario</span>
                 <span><b class="legend-sample hl-tone">ab</b>Tono</span>
-                <span><b class="legend-sample hl-clarity">ab</b>Claridad</span>
+                <span><b class="legend-sample hl-clarity">ab</b>Claridad y coherencia</span>
             </div>`;
     }
 
@@ -74,8 +74,8 @@
         const mode = D.modes[st.mode];
         const guidedTabs = {
             writing: ['text', 'rules'],
-            errors: ['errlist', 'rule'],
-            lessons: ['vocabulary']
+            errors: ['rtext', 'errlist', 'rule'],
+            lessons: ['reading', 'vocabulary']
         };
         const allowed = guidedTabs[st.mode] || [mode.tabs[0].id];
         if (st.detailsLevel === 2) {
@@ -103,6 +103,8 @@
             errlist: 'Ver tus errores y su estado.',
             rule: 'Leer la regla del error que practicas.',
             vocabulary: 'Guardar y repasar palabras del contexto.',
+            rtext: 'Ver tu texto original, con marcas o con tus cambios.',
+            reading: 'Ver tus ideas principales, oraciones analizadas y respuestas.',
             progress: 'Consultar tu avance de aprendizaje.',
         };
         return descriptions[id] || 'Abrir esta vista de apoyo.';
@@ -128,8 +130,45 @@
     }
 
     /* ---------------- Contenido por tab ---------------- */
+    /* Tu propio correo (el que pegaste en el chat), con marcas o con tus cambios */
+    /* Un texto revisado (Producir o Revisar): original, con marcas o con tus cambios (0.3.1 y 0.3.8) */
+    function reviewedTextHtml(st, R, progress) {
+        const G = R.genre();
+        const v = st.version === 'final' || st.version === 'original' ? st.version : 'draft';
+        const tab = (id, label) => `<button class="version-tab ${v === id ? 'is-active' : ''}" data-action="set-version" data-version="${id}" aria-pressed="${v === id}">${label}</button>`;
+        return `
+            <div class="panel-head"><div><h3>${G.Noun}</h3><p>${escapeHtml(progress)}</p></div></div>
+            <div class="version-tabs" role="group" aria-label="Versiones de ${G.noun}">${tab('original', 'Original')}${tab('draft', 'Con marcas')}${tab('final', 'Con tus cambios')}</div>
+            <div class="text-box" lang="en">${R.panelHtml(v)}</div>
+            ${v === 'draft' ? legend() : ''}`;
+    }
+    function renderOwnTextPanel(st) {
+        const W = window.Writing;
+        if (!st.wr) {
+            const plan = W.planHtml();
+            return `<div class="panel-head"><div><h3>${plan ? 'Tu plan' : 'Tu texto'}</h3><p>${escapeHtml(W.status().progress)}</p></div></div>
+                ${plan || '<p class="muted-text">Cuando me digas qué vas a escribir, aquí verás tu plan, tus ideas y tu esquema. Cuando envíes tu borrador, aparecerá con sus marcas y con los cambios que decidas.</p>'}`;
+        }
+        return reviewedTextHtml(st, W.reviewer, W.status().progress);
+    }
+    /* Revisar: tu texto y, debajo, tu registro de errores (0.3.7) */
+    function renderRTextPanel() {
+        const st = S.get(); const E = window.Errors; const gs = E.groups();
+        const reg = `<div class="panel-note"><strong>Tu registro de errores</strong><p>${gs.length ? `${gs.length} ${gs.length === 1 ? 'tipo' : 'tipos'} · ${gs.filter((g) => g.e.status === 'pending').length} ${gs.filter((g) => g.e.status === 'pending').length === 1 ? 'pendiente' : 'pendientes'}` : 'Vacío: se llena con las correcciones que aplicas.'}</p></div>${gs.length ? E.listHtml(gs.slice(0, 4)) : ''}`;
+        if (!st.rv) return `<div class="panel-head"><div><h3>Tu texto</h3><p>Todavía no lo pegaste</p></div></div>
+            <p class="muted-text">Pega en el chat tu correo, cuento u otro texto en inglés. Aquí verás el original, las marcas y tu versión con los cambios que decidas.</p>${reg}`;
+        return reviewedTextHtml(st, E.reviewer, E.reviewer.status().progress) + reg;
+    }
+    /* Comprender: lo que vas logrando con tu lectura */
+    function renderReadingPanel() {
+        const html = window.Vocab.summaryHtml();
+        return `<div class="panel-head"><div><h3>Tu lectura</h3><p>${html ? 'Lo que vas entendiendo del texto' : 'Todavía no pegaste un texto'}</p></div></div>
+            ${html || '<p class="muted-text">Pega un texto en inglés en el chat. Aquí quedarán sus datos, tus ideas principales, las oraciones que analices y tus respuestas.</p>'}`;
+    }
+
     function renderTextPanel() {
         const st = S.get();
+        if (!(st.wDemoAt >= 0 && !st.wr)) return renderOwnTextPanel(st);
         const inspected = st.inspected.length;
         const versions = [
             { id: 'original', label: 'Original' },
@@ -165,7 +204,7 @@
             </div>
             <div class="panel-actions">
                 <button class="btn" data-action="open-synonyms">${I.search(14)} Buscar sinónimos</button>
-                <button class="btn" data-action="open-export">${I.export(14)} Exportar resumen</button>
+                <button class="btn" data-action="open-export">${I.export(14)} Resumen de tus cambios</button>
             </div>
         `;
     }
@@ -301,7 +340,7 @@
                 }).join('')}
             </div>
             <div class="panel-actions">
-                <button class="btn btn-primary" data-action="open-export">${I.export(14)} Exportar cambios</button>
+                <button class="btn btn-primary" data-action="open-export">${I.export(14)} Resumen de tus cambios</button>
             </div>
         `;
     }
@@ -312,12 +351,12 @@
         const gs = E.groups();
         return `
             <div class="panel-head">
-                <div><h3>Tus errores</h3><p>Salen de las correcciones que aceptas en tu correo</p></div>
+                <div><h3>Tu registro de errores</h3><p>Salen de las correcciones que aplicas al revisar tus textos</p></div>
             </div>
             ${gs.length ? E.listHtml(gs) : `
                 <div class="empty-state">
                     <strong>Todavía no tienes errores guardados</strong>
-                    <p>Acepta una corrección al revisar tu correo, o haz el diagnóstico de 5 oraciones en el chat.</p>
+                    <p>Aplica una corrección al revisar un texto, o haz el diagnóstico de 5 oraciones en el chat.</p>
                 </div>`}
         `;
     }
@@ -360,28 +399,27 @@
 
     function renderProgressPanel() {
         const st = S.get();
-        const saved = st.vocabWords.length;
+        const words = st.vocabWords.length;
+        const used = st.vocabWords.filter((w) => w.practicedAt).length;
+        const bank = Object.keys(st.errBank).map((id) => ({ id, e: st.errBank[id], r: window.Exercises.RULES[id] })).filter((x) => x.r);
+        const done = bank.filter((x) => x.e.status === 'done');
+        const applied = [st.wr, st.rv].filter(Boolean).reduce((n, w) => n + w.issues.filter((i) => i.status === 'accepted').length, 0);
         return `
             <div class="panel-head">
-                <div><h3>Tu progreso</h3><p>Esta semana</p></div>
-                <span class="paper-tag">WoZ · rigor</span>
+                <div><h3>Tu progreso</h3><p>Lo que hiciste en este navegador</p></div>
             </div>
             <div class="stat-grid">
-                <div class="stat-card"><strong>14</strong><span>palabras nuevas</span></div>
-                <div class="stat-card"><strong>5</strong><span>errores superados</span></div>
-                <div class="stat-card"><strong>38</strong><span>min hablados</span></div>
+                <div class="stat-card"><strong>${words}</strong><span>palabras guardadas</span></div>
+                <div class="stat-card"><strong>${done.length} de ${bank.length}</strong><span>errores superados</span></div>
+                <div class="stat-card"><strong>${applied}</strong><span>cambios aplicados a tus textos</span></div>
             </div>
             <div class="goal-box">
-                <div class="coverage-head"><span>Meta: 20 palabras nuevas</span><strong>${14 + saved} / 20</strong></div>
-                <div class="coverage-bar"><span style="width:${Math.min(((14 + saved) / 20) * 100, 100)}%"></span></div>
-                <p class="muted-text">Guardaste ${saved} palabra${saved === 1 ? '' : 's'} en esta sesión.</p>
+                <div class="coverage-head"><span>Palabras que ya usaste en una oración tuya</span><strong>${used} / ${words}</strong></div>
+                <div class="coverage-bar"><span style="width:${words ? Math.round((used / words) * 100) : 0}%"></span></div>
             </div>
             <div class="panel-note">
-                <strong>Errores que dejaron de aparecer</strong>
-                <p>“I am agree” · 4 días sin repetirse.</p>
-            </div>
-            <div class="panel-actions">
-                <button class="btn" data-action="open-progress">Ver detalle</button>
+                <strong>Errores superados</strong>
+                <p>${done.length ? done.map((x) => x.r.name).join(' · ') : 'Todavía ninguno. Practica un error hasta lograr 4 de 5 sin pista.'}</p>
             </div>
         `;
     }
@@ -401,7 +439,9 @@
             errlist: renderErrListPanel,
             rule: renderRulePanel,
             vocabulary: renderVocabularyPanel,
-            progress: renderProgressPanel
+            progress: renderProgressPanel,
+            rtext: renderRTextPanel,
+            reading: renderReadingPanel
         };
         return (map[tab] || renderTextPanel)();
     }
@@ -410,9 +450,9 @@
     function historyGroupsHtml() {
         const st = S.get();
         const groups = [
-            { mode: 'writing', label: 'Redacción asistida', icon: 'doc' },
-            { mode: 'errors', label: 'Errores frecuentes', icon: 'tag' },
-            { mode: 'lessons', label: 'Vocabulario en contexto', icon: 'book' }
+            { mode: 'lessons', label: 'Comprender', icon: 'book' },
+            { mode: 'writing', label: 'Producir', icon: 'doc' },
+            { mode: 'errors', label: 'Revisar', icon: 'tag' }
         ];
         const currentMode = st.historyMode || st.mode;
         const orderedGroups = groups.slice().sort((a, b) => (a.mode === currentMode ? -1 : b.mode === currentMode ? 1 : 0));
@@ -459,9 +499,17 @@
         `;
     }
 
+    /* Un consejo por tarea, ligado a su aprendizaje (Causalidad__Cobertura_y_Bugs__Copy_.md) */
+    const HELP = {
+        writing: { title: 'Planifica antes de escribir.', text: 'Define el tipo de texto, haz una lluvia de ideas y ordénalas en un esquema. Después escribe tu borrador y decide cada sugerencia.', asks: ['Tengo que escribir un cuento corto', '¿Cómo empiezo un correo formal?', 'Ver un modelo'] },
+        errors: { title: 'Primero encuéntralo tú.', text: 'Antes de aplicar una sugerencia, lee la pista y busca por qué está mal: lo que descubres tú se recuerda mejor.', asks: ['¿Cuándo uso since y for?', 'Ver mi registro', 'Ponme a prueba'] },
+        lessons: { title: 'Lee primero el texto completo.', text: 'Busca la idea de cada párrafo antes de traducir palabras: el significado depende del contexto.', asks: ['¿Qué significa deadline?', 'Explícame esta oración: The decision was postponed until next term.'] }
+    };
+
     function renderSuggestions() {
         const st = S.get();
         if (st.detailsLevel < 3) {
+            const tip = HELP[st.mode] || HELP.writing;
             return `
                 <div class="popover-head">
                     <h4>Una forma de avanzar</h4>
@@ -469,9 +517,10 @@
                 </div>
                 <div class="learner-tip">
                     <span class="suggestion-icon">${I.lightbulb(16)}</span>
-                    <div><strong>Piensa antes de aceptar.</strong><p>Lee la pista, intenta explicar el cambio con tus propias palabras y luego decide.</p></div>
+                    <div><strong>${tip.title}</strong><p>${tip.text}</p></div>
                 </div>
-                <button class="btn btn-ghost full" data-action="set-help" data-help="explicacion">Mostrar explicación</button>
+                <p class="help-asks-label">Puedes pedirme, por ejemplo:</p>
+                <div class="chip-row help-asks">${tip.asks.map((a) => `<button class="chip" data-action="fill-input" data-text="${a}">${I.message(12)} ${a}</button>`).join('')}</div>
             `;
         }
         return `
@@ -514,7 +563,7 @@
                     <span class="paper-tag">WaitGPT</span>
                     <span class="papers-more">ver mapa</span>
                 </button>
-                <button class="btn btn-primary full" data-action="open-export">${I.export(14)} Exportar resumen</button>
+                <button class="btn btn-primary full" data-action="open-export">${I.export(14)} Resumen de tus cambios</button>
                 <div class="aside-footer-row">
                     <button class="text-btn" data-action="open-protocol">${I.shield(13)} Protocolo WoZ</button>
                     <button class="text-btn" data-action="open-debriefing">${I.info(13)} Debriefing</button>

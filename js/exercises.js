@@ -1,5 +1,5 @@
 /* ============================================================
-   Exercises · banco de práctica: 8 oraciones por tipo de error (tarea 2)
+   Exercises · banco de práctica: 8 oraciones por tipo de error (0.3.7 registro y práctica)
    Formato: oración con error => respuesta aceptada | otra aceptada
    ============================================================ */
 (function () {
@@ -173,7 +173,15 @@ Would you confirm the date. => Would you confirm the date?
 May I ask a question. => May I ask a question?
 Could I have more time. => Could I have more time?
 Could we change the group. => Could we change the group?
-Would you review my essay. => Would you review my essay?`
+Would you review my essay. => Would you review my essay?`,
+        tense: `Yesterday she go to the market. => Yesterday she went to the market.
+Once upon a time, a boy live in a small village. => Once upon a time, a boy lived in a small village.
+One day they find an old map. => One day they found an old map.
+Last summer we visit our grandparents. => Last summer we visited our grandparents.
+Suddenly the dog run into the forest. => Suddenly the dog ran into the forest.
+In the end, the girl see her mother again. => In the end, the girl saw her mother again.
+Long ago there is a king who loved music. => Long ago there was a king who loved music.
+After dinner he tell us a story. => After dinner he told us a story.`
     };
 
     const BANK = {};
@@ -206,6 +214,14 @@ Would you review my essay. => Would you review my essay?`
     const CONTR = {"don't":"do not","doesn't":"does not","didn't":"did not","can't":"cannot","couldn't":"could not","won't":"will not","wouldn't":"would not","shouldn't":"should not","isn't":"is not","aren't":"are not","wasn't":"was not","weren't":"were not","haven't":"have not","hasn't":"has not","hadn't":"had not","i'm":"I am","i've":"I have","i'll":"I will","i'd":"I would","you're":"you are","you've":"you have","you'll":"you will","we're":"we are","we've":"we have","we'll":"we will","they're":"they are","they've":"they have","it's":"it is","that's":"that is","there's":"there is","he's":"he is","she's":"she is","what's":"what is","let's":"let us"};
     /* Nombre, pista y regla de cada tipo de error */
     const RULES = {
+     "tense": {
+      "name": "Pasado en la narración",
+      "kind": "grammar",
+      "hint": "La historia ya pasó. ¿En qué tiempo va este verbo?",
+      "why": "En un relato en pasado, los verbos de la narración van en pasado simple: go → went, find → found, live → lived.",
+      "bad": "One day she find an old house.",
+      "good": "One day she found an old house."
+     },
      "agree": {
       "name": "“Agree” sin “be”",
       "kind": "grammar",

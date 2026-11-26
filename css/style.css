@@ -2290,10 +2290,15 @@ button.brand-lockup { border: 0; padding: 0; background: transparent; border-rad
 
 /* ---------- Pantalla de inicio ---------- */
 .home { flex: 1; min-height: 0; overflow-y: auto; background: var(--bg); }
-.view-home .workspace,
+.home { display: none !important; }
+/* Estado inicial: el mismo chat, sin la estructura de una tarea. Al detectar la tarea, aparece. */
+.view-home .stagebar,
+.view-home .goal-strip,
+.view-home .branch-ribbon,
+.view-home .side-panel,
 .view-home .mode-nav,
 .view-home .suggestion-btn,
-.view-home .chats-toggle,
+.view-home .sheet-toggle,
 .view-home .header-divider { display: none !important; }
 .home-inner { max-width: 880px; margin: 0 auto; padding: 48px 24px 56px; display: flex; flex-direction: column; gap: 32px; }
 .home h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.01em; }
@@ -2392,3 +2397,93 @@ button.voc-tok:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .voc-state { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
 .voc-state.is-used { background: var(--cat-clarity-soft); color: var(--cat-clarity); }
 .voc-own { font-size: 13.5px; padding: 6px 10px; border-radius: 8px; background: var(--cat-clarity-soft); }
+
+/* ============================================================
+   Inicio por prompt: la persona escribe lo que necesita y la IA
+   le dice a qué tarea ir
+   ============================================================ */
+.home-inner { gap: 20px; max-width: 760px; }
+.home-hero { display: flex; flex-direction: column; gap: 8px; }
+.home-hero .home-lead { margin-top: 0; }
+.home-chat { gap: 12px; }
+.home-chat[hidden] { display: none; }
+.home-form { align-items: flex-end; }
+.home-form textarea { height: auto; min-height: 56px; max-height: 180px; font-size: 16px; }
+.home-hint { margin-top: -12px; }
+.home-examples { display: flex; flex-direction: column; gap: 6px; }
+.home-examples .chip-row { margin-top: 0; }
+.home .chip, .bubble.ai .chip-row.is-replies .chip { white-space: normal; text-align: left; line-height: 1.3; }
+.chip.is-main { background: var(--accent); color: #fff; font-weight: 600; }
+.chip.is-main svg { color: #fff; }
+button.chip.is-main:hover { background: var(--accent-dark); }
+.home-options { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; color: var(--text-2); }
+.home-continue-line { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-3); }
+.home-continue-line .text-btn { min-height: 32px; text-align: left; }
+.home-tasks summary { cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 600; color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
+.home-tasks[open] summary { margin-bottom: 12px; }
+
+/* ============================================================
+   Redacción: revisión de TU correo en el chat
+   ============================================================ */
+.wr-label { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; color: var(--text-3); }
+.wr-text { font-size: 15px; line-height: 1.7; padding: 12px 14px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--border); }
+.wr-num { font-size: 12px; font-weight: 700; color: var(--text-3); margin-left: 1px; }
+.wr-fixed { text-decoration: none; background: var(--cat-clarity-soft); color: var(--cat-clarity); font-weight: 600; padding: 0 2px; border-radius: 3px; }
+.wr-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.wr-item { padding: 10px 12px; border: 1px solid var(--border-2); border-radius: 10px; display: grid; gap: 6px; font-size: 14px; }
+.wr-item.is-decided { background: var(--surface-3); }
+.wr-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wr-item-head small { color: var(--text-3); font-size: 12px; }
+.wr-num-badge { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); font-size: 12px; font-weight: 700; }
+.wr-why { color: var(--text-2); font-size: 13.5px; }
+.wr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wr-state { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.wr-final, .wr-template { margin: 0; white-space: pre-wrap; font-family: inherit; font-size: 14.5px; line-height: 1.6; padding: 12px 14px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--border); }
+.wr-plan { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+.text-btn { min-height: 32px; }
+
+.help-asks-label { margin-top: 10px; font-size: 13px; color: var(--text-2); }
+.help-asks { margin-top: 6px; }
+.home-examples { align-items: flex-start; }
+
+/* Inicio dentro del chat */
+.start-hero { display: flex; flex-direction: column; gap: 12px; padding: 40px 0 8px; }
+.start-hero h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.01em; }
+.start-hero .home-lead { margin-top: 0; font-size: 16px; color: var(--text-2); max-width: 620px; }
+@media (max-width: 720px) { .start-hero { padding-top: 20px; } .start-hero h1 { font-size: 24px; } }
+.mode-note { align-self: flex-start; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); color: var(--text-2); font-size: 13px; }
+.mode-note > svg { color: var(--text-3); flex: none; }
+.mode-note .chip-row { margin-top: 0; }
+/* La estructura de la tarea aparece en su sitio (sin animación si se pidió reducir movimiento) */
+@keyframes adapt-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.just-adapted .stagebar, .just-adapted .goal-strip, .just-adapted .side-panel, .just-adapted .mode-nav { animation: adapt-in 0.35s ease-out; }
+.reduce-motion .just-adapted .stagebar { animation: none; }
+.start-hero .chip { white-space: normal; text-align: left; line-height: 1.3; }
+.mode-note .chip { background: #fff; border-color: var(--border-2); }
+
+/* ============================================================
+   Tareas 0.1 Comprender · 0.2 Producir · 0.3 Revisar
+   ============================================================ */
+/* 0.1.1–0.1.2: datos del texto */
+.voc-meta { font-size: 14px; color: var(--text-2); }
+.voc-meta small { display: block; color: var(--text-3); font-size: 13px; }
+/* 0.1.3: el párrafo que se trabaja, con su oración principal marcada en la pista */
+.voc-para { margin: 0; padding: 10px 14px; border-left: 4px solid var(--text-2); background: var(--surface-3); border-radius: 0 10px 10px 0; font-size: 15px; line-height: 1.6; }
+.voc-para mark { background: var(--cat-clarity-soft); border-bottom: 3px solid var(--cat-clarity-mark); color: var(--text); padding: 0 2px; }
+/* 0.1.6: elegir una oración y ver cómo se arma */
+.voc-sents { display: grid; gap: 6px; }
+.voc-sent { font: inherit; font-size: 14.5px; text-align: left; color: var(--text); background: var(--surface-3); border: 1px solid var(--border-2); border-radius: 10px; padding: 8px 12px; min-height: 44px; cursor: pointer; }
+.voc-sent:hover { background: var(--surface-2); border-color: var(--border-3); }
+.voc-sent:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.voc-gram { display: grid; gap: 6px; margin: 8px 0 0; }
+.voc-gram > div { display: grid; grid-template-columns: 170px 1fr; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.voc-gram dt { font-weight: 700; color: var(--text-2); }
+.voc-gram dd { margin: 0; }
+.voc-gram small { display: block; color: var(--text-3); font-size: 13px; margin-top: 2px; }
+.voc-compare { font-size: 14px; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft-2); }
+@media (max-width: 600px) { .voc-gram > div { grid-template-columns: 1fr; gap: 2px; } }
+/* 0.2.4: esquema por partes */
+.wr-outline { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; }
+.wr-outline ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; }
+.wr-outline small { display: block; color: var(--text-3); font-size: 13px; }
+.wr-plan small { display: block; color: var(--text-3); font-size: 13px; }

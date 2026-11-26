@@ -10,7 +10,7 @@
         grammar: 'Gramática',
         vocab: 'Vocabulario',
         tone: 'Tono',
-        clarity: 'Claridad'
+        clarity: 'Claridad y coherencia'
     };
 
     /* ---------- Utilidades ---------- */
@@ -67,6 +67,25 @@
     const OBJ = { he: 'him', she: 'her', they: 'them', we: 'us', i: 'me' };
     const base = BASE.join('|');
     const AUX = /\b(?:do|does|did|can|could|will|would|should|may|might|must|shall|to|let|lets|make|makes|made|help|helps|helped|see|saw|hear|heard|that|suggest|recommend|if)\s+(?:the\s+)?$/;
+
+    /* ---------- Narración: pasado simple (cuentos y relatos) ---------- */
+    const IRR = { go: 'went', do: 'did', have: 'had', write: 'wrote', see: 'saw', take: 'took', give: 'gave', come: 'came', speak: 'spoke', begin: 'began', know: 'knew', choose: 'chose', eat: 'ate', break: 'broke', drive: 'drove', send: 'sent', make: 'made', get: 'got', find: 'found', tell: 'told', say: 'said', think: 'thought', understand: 'understood', run: 'ran', become: 'became', leave: 'left', feel: 'felt', keep: 'kept', meet: 'met', bring: 'brought', buy: 'bought', catch: 'caught', fall: 'fell', fly: 'flew', hear: 'heard', hold: 'held', lose: 'lost', sit: 'sat', sleep: 'slept', stand: 'stood', swim: 'swam', wake: 'woke', win: 'won', sing: 'sang', throw: 'threw', teach: 'taught', grow: 'grew', draw: 'drew', spend: 'spent', build: 'built', pay: 'paid', ride: 'rode', hide: 'hid', fight: 'fought', forget: 'forgot' };
+    const REG = 'live walk open look decide want need like love play start stop try cry call ask answer arrive stay jump climb shout scream smile laugh help work visit return travel discover explore enter close wait watch listen dream hope plan carry hurry die save follow notice remember miss pull push touch turn learn use move change happen appear disappear belong knock enjoy finish study cook clean dance show smell pick kiss rain wish thank greet order seem'.split(' ');
+    const pastOf = (v) => IRR[v] || (/e$/.test(v) ? `${v}d` : /[^aeiou]y$/.test(v) ? `${v.slice(0, -1)}ied` : /^(?:stop|plan|drop|hop|hug|beg|shop)$/.test(v) ? `${v}${v.slice(-1)}ed` : `${v}ed`);
+    const NARR = {};
+    Object.keys(IRR).concat(REG).forEach((v) => { NARR[v] = pastOf(v); NARR[third(v)] = pastOf(v); });
+    Object.assign(NARR, { is: 'was', are: 'were', am: 'was', has: 'had' });
+    const PAST_SIGNS = new RegExp(`\\b(?:was|were|had|did|${Object.values(IRR).join('|')}|[a-z]{3,}ed)\\b`, 'gi');
+    function genre(text) {
+        const t = String(text || '');
+        if (/^\s*(dear|hi|hello|good (morning|afternoon)|to whom)\b/i.test(t) || /\b(best regards|kind regards|sincerely|yours (faithfully|sincerely))\b/i.test(t)) return 'email';
+        if (/once upon a time|\bone day\b|long ago|\bthere (was|were|lived)\b|happily ever|\bthe end\b/i.test(t)) return 'story';
+        if ((t.match(PAST_SIGNS) || []).length >= 3 && /\b(he|she|they)\b/i.test(t)) return 'story';
+        return 'other';
+    }
+    const quoted = (t, i) => ((t.slice(0, i).match(/["“”]/g) || []).length % 2 === 1);
+    const CONNECT = /\b(however|in addition|moreover|furthermore|also|then|after that|afterwards|later|next|first|firstly|second|finally|in the end|suddenly|meanwhile|one day|because|so|therefore|as a result|for example|for instance|on the other hand|in conclusion|to sum up|although|but|while|when|before|after|besides|instead)\b/i;
+    const paragraphs = (t) => { const out = []; const rx = /[^\n]+(?:\n(?!\s*\n)[^\n]*)*/g; let m; while ((m = rx.exec(t))) { if (m[0].trim()) out.push({ start: m.index, end: m.index + m[0].length, text: m[0] }); } return out; };
 
     /* ---------- Listas ---------- */
     const SPELL = { recieve: 'receive', recieved: 'received', becouse: 'because', beacuse: 'because', becuase: 'because', tomorow: 'tomorrow', tommorow: 'tomorrow', wich: 'which', writting: 'writing', untill: 'until', definately: 'definitely', necesary: 'necessary', neccesary: 'necessary', posible: 'possible', imposible: 'impossible', diferent: 'different', comunication: 'communication', profesor: 'professor', proffesor: 'professor', adress: 'address', oportunity: 'opportunity', responsability: 'responsibility', sincerly: 'sincerely', sincerelly: 'sincerely', atached: 'attached', atach: 'attach', knowlege: 'knowledge', realy: 'really', allways: 'always', togheter: 'together', foward: 'forward', comming: 'coming', begining: 'beginning', studing: 'studying', inmediately: 'immediately', inconvinience: 'inconvenience', inconvenient: null, importan: 'important', expecially: 'especially', experiance: 'experience', enviroment: 'environment', goverment: 'government', sugestion: 'suggestion', apreciate: 'appreciate', acommodate: 'accommodate', sucess: 'success', succesful: 'successful', occured: 'occurred', truely: 'truly', greatful: 'grateful', thier: 'their', freind: 'friend', wether: 'whether', asignment: 'assignment', asigment: 'assignment', extention: 'extension', aproval: 'approval', aprove: 'approve', comitee: 'committee', carrer: 'career', semestre: 'semester', univercity: 'university', universty: 'university', schollarship: 'scholarship', scolarship: 'scholarship' };
@@ -125,7 +144,7 @@
             })
         },
         {
-            id: 'third', kind: 'grammar', name: 'Tercera persona (-s)',
+            id: 'third', kind: 'grammar', name: 'Tercera persona (-s)', notIn: ['story'],
             hint: 'Mira el sujeto: es una sola persona o cosa. ¿Qué le falta al verbo?',
             why: 'En presente, con he, she, it o un sujeto singular, el verbo lleva -s o -es.',
             bad: 'She work in the library.', good: 'She works in the library.',
@@ -278,7 +297,7 @@
             find: pairRule(FALSE)
         },
         {
-            id: 'direct', kind: 'tone', name: 'Petición demasiado directa',
+            id: 'direct', kind: 'tone', name: 'Petición demasiado directa', onlyIn: ['email'],
             hint: 'Suena a orden. ¿Cómo lo pedirías con cortesía?',
             why: 'En un correo formal se pide con “Could you please…?”, “Would it be possible to…?” o “I would like to…”.',
             bad: 'Send me the document.', good: 'Could you please send me the document?',
@@ -296,7 +315,7 @@
             }
         },
         {
-            id: 'contraction', kind: 'tone', name: 'Contracciones', minFormality: 2,
+            id: 'contraction', kind: 'tone', name: 'Contracciones', minFormality: 2, notIn: ['story'],
             hint: 'En un texto formal, ¿se escriben las formas cortas con apóstrofo?',
             why: 'En un correo formal se escribe la forma completa: “I am”, “do not”, “cannot”.',
             bad: "I can't attend the class.", good: 'I cannot attend the class.',
@@ -306,7 +325,7 @@
             })
         },
         {
-            id: 'informal', kind: 'tone', name: 'Palabras informales', minFormality: 2,
+            id: 'informal', kind: 'tone', name: 'Palabras informales', minFormality: 2, notIn: ['story'],
             hint: 'Esta palabra es de conversación entre amigos. ¿Hay una más formal?',
             why: 'Un correo formal evita el lenguaje de chat: “thanks” → “thank you”, “asap” → “as soon as possible”.',
             bad: 'Thanks for your help.', good: 'Thank you for your help.',
@@ -319,6 +338,63 @@
             why: 'Could you…, Would you…, Can you… y Would it be possible… son preguntas: terminan en “?”.',
             bad: 'Could you help me.', good: 'Could you help me?',
             find: (t) => sentences(t).filter((s) => /^(?:could|would|can|may|will)\s+(?:you|I|it|we)\b/i.test(s.text) && /\.$/.test(s.text)).map((s) => ({ start: s.start, end: s.end, fixes: [s.text.replace(/\.+$/, '?')] }))
+        },
+        {
+            id: 'tense', kind: 'grammar', name: 'Pasado en la narración', onlyIn: ['story'],
+            hint: 'Tu historia ya pasó. ¿En qué tiempo va este verbo?',
+            why: 'En un relato en pasado, los verbos de la narración van en pasado simple: go → went, find → found, live → lived. Si quieres contarlo en presente a propósito, mantén tu versión.',
+            bad: 'One day she find an old house.', good: 'One day she found an old house.',
+            find: (t) => each(t, /\b(i|you|he|she|it|we|they|who|there|and|[A-Z][a-z]+|(?:the|a|an|his|her|their|my|our|this|that)\s+[a-z]+)\s+(?=(?:(also|suddenly|then|always|never|often|still|quickly|slowly|finally|immediately|soon)\s+)?([a-z]+)\b(?!['’]))/g, (m, x) => {
+                const v = m[3]; const fix = NARR[v];
+                if (m[1] === 'and' && /^(?:is|are|am|has)$/.test(v)) return null;
+                if (!fix || quoted(x, m.index)) return null;
+                if (/^(?:Once|One|Then|In|At|On|After|Before|When|Suddenly|Finally|Yesterday|Long|Last)$/.test(m[1])) return null;
+                if (/^(?:there)$/i.test(m[1]) && !/^(?:is|are)$/.test(v)) return null;
+                if (/\b(?:to|will|would|can|could|should|must|may|might|did|does|do|let)\s+$/i.test(before(x, m.index, 12))) return null;
+                return { offset: m[0].length + (m[2] ? m[2].length + 1 : 0), length: v.length, fix: like(v, fix) };
+            })
+        },
+        {
+            id: 'greet', kind: 'clarity', name: 'Falta el saludo', type: 'idea', onlyIn: ['email'],
+            hint: '¿Cómo empieza un correo formal?',
+            why: 'Un correo formal empieza con un saludo: “Dear Professor Ramos,” o “Dear Sir or Madam,”.',
+            bad: 'I am writing to ask…', good: 'Dear Professor Ramos, I am writing to ask…',
+            find: (t) => { if (/^\s*(dear|hello|good (morning|afternoon)|to whom)\b/i.test(t)) return []; const s = sentences(t)[0]; return s ? [{ start: s.start, end: s.end, fixes: [] }] : []; }
+        },
+        {
+            id: 'closing', kind: 'clarity', name: 'Falta la despedida', type: 'idea', onlyIn: ['email'],
+            hint: '¿Cómo se despide un correo formal?',
+            why: 'Un correo formal cierra con una despedida y tu nombre: “Best regards,” o “Sincerely,”.',
+            bad: '…the new date. Ana', good: '…the new date. Best regards, Ana',
+            find: (t) => { if (/\b(regards|sincerely|best wishes|yours|thank you|thanks|respectfully)\b/i.test(t.slice(-160))) return []; const ss = sentences(t); const s = ss[ss.length - 1]; return s ? [{ start: s.start, end: s.end, fixes: [] }] : []; }
+        },
+        {
+            id: 'connect', kind: 'clarity', name: 'Ideas sin conector', type: 'idea',
+            hint: '¿Cómo se relaciona esta parte con la anterior?',
+            why: 'Un conector muestra la relación entre ideas: “Then”, “After that”, “Suddenly” en un relato; “However”, “In addition”, “For example” en otros textos.',
+            bad: 'The girl was alone. She found a house.', good: 'The girl was alone. Then, she found a house.',
+            find: (t) => {
+                const ps = paragraphs(t);
+                if (ps.length >= 2) return ps.slice(1).map((p) => sentences(p.text)[0] && { p, s: sentences(p.text)[0] }).filter((x) => x && !CONNECT.test(x.s.text) && x.s.text.split(/\s+/).length > 3)
+                    .map((x) => ({ start: x.p.start + x.s.start, end: x.p.start + x.s.end, fixes: [] }));
+                const ss = sentences(t);
+                if (ss.length >= 4 && !ss.slice(1).some((s) => CONNECT.test(s.text))) return [{ start: ss[1].start, end: ss[1].end, fixes: [] }];
+                return [];
+            }
+        },
+        {
+            id: 'parts', kind: 'clarity', name: 'Inicio, nudo y desenlace', type: 'idea', onlyIn: ['story'],
+            hint: '¿Dónde termina el inicio y empieza el problema?',
+            why: 'Un cuento se entiende mejor en tres partes: inicio (personajes y lugar), nudo (el problema) y desenlace (cómo termina). Sepáralas en párrafos.',
+            bad: 'Todo el cuento en un solo bloque.', good: 'Tres párrafos: inicio, nudo y desenlace.',
+            find: (t) => { const ss = sentences(t); if (paragraphs(t).length >= 3 || ss.length < 4) return []; const s = ss[ss.length - 1]; return [{ start: s.start, end: s.end, fixes: [] }]; }
+        },
+        {
+            id: 'conclusion', kind: 'clarity', name: 'Falta la conclusión', type: 'idea', onlyIn: ['other'],
+            hint: '¿Tu último párrafo cierra la idea principal?',
+            why: 'Un texto expositivo termina con una conclusión que retoma la idea principal: “In conclusion…”, “To sum up…”.',
+            bad: '…and that is another reason.', good: 'In conclusion, …',
+            find: (t) => { const ps = paragraphs(t); if (ps.length < 3) return []; const last = ps[ps.length - 1]; if (/\b(in conclusion|to sum up|in short|overall|finally|to conclude|in summary)\b/i.test(last.text)) return []; const s = sentences(last.text)[0]; return s ? [{ start: last.start + s.start, end: last.start + s.end, fixes: [] }] : []; }
         },
         {
             id: 'long', kind: 'clarity', name: 'Oración muy larga', type: 'idea',
@@ -349,10 +425,13 @@
     function check(text, ctx) {
         const formality = (ctx && ctx.formality) || 2;   // 1 semiformal · 2 formal · 3 muy formal
         const only = ctx && ctx.only;
+        const g = (ctx && ctx.genre) || 'email';       // email · story · other
         const found = [];
         RULES.forEach((r, order) => {
             if (only && !only.includes(r.id)) return;
             if (r.minFormality && formality < r.minFormality) return;
+            if (r.onlyIn && !r.onlyIn.includes(g)) return;
+            if (r.notIn && r.notIn.includes(g)) return;
             r.find(text).forEach((f) => {
                 const frag = text.slice(f.start, f.end);
                 const fixes = f.fixes.filter((x) => x !== frag);
@@ -367,5 +446,5 @@
         return kept.sort((a, b) => a.start - b.start);
     }
 
-    window.Checker = { KINDS, RULES, rule: (id) => byId[id], check, sentences, sentenceAt, CONTR };
+    window.Checker = { KINDS, RULES, rule: (id) => byId[id], check, sentences, sentenceAt, paragraphs, genre, pastOf, CONNECT, CONTR };
 })();

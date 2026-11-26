@@ -42,6 +42,9 @@
         if (msg.role === 'user') {
             return `<div class="bubble user">${escapeHtml(msg.text)}</div>`;
         }
+        if (msg.note) {
+            return `<div class="mode-note" role="note">${I.info(14)}<span>${escapeHtml(msg.text)}</span>${msg.chips && msg.chips.length ? `<span class="chip-row">${msg.chips.map(chipHtml).join('')}</span>` : ''}</div>`;
+        }
         const bar = actionBarHtml(msg, idx);
         return `
             <div class="bubble ai ${bar ? 'has-actions' : ''} ${msg.error ? 'error' : ''} ${msg.tone === 'ok' ? 'is-ok' : ''}">
@@ -49,6 +52,8 @@
                 <p>${escapeHtml(msg.text)}</p>
                 ${msg.html ? `<div class="bubble-card">${msg.html}</div>` : ''}
                 ${msg.dyn === 'reading' ? `<div class="bubble-card">${window.Vocab.readingHtml(isLiveReading(idx))}</div>` : ''}
+                ${msg.dyn === 'wreview' ? `<div class="bubble-card">${window.Writing.reviewHtml(true)}</div>` : ''}
+                ${msg.dyn === 'rreview' ? `<div class="bubble-card">${window.Errors.reviewer.reviewHtml(true)}</div>` : ''}
                 ${msg.chips && msg.chips.length ? `<div class="chip-row ${msg.replies ? 'is-replies' : ''}">${msg.chips.map(chipHtml).join('')}</div>` : ''}
                 ${bar}
             </div>`;
@@ -64,20 +69,19 @@
 
     function writingChat() {
         const st = S.get();
+        if (!st.messages.writing.length && !st.seeding) window.Writing.intro();
         const msgs = st.messages.writing;
-        const initial = msgs.slice(0, 2).map(messageHtml).join('');
-        const rest = msgs.slice(2).map((m, i) => messageHtml(m, i + 2)).join('');
+        const at = st.wDemoAt;
+        // el análisis del correo de ejemplo va justo después de sus dos mensajes
         return `
-            ${initial}
-            ${window.Corrections.renderAnalysis()}
-            ${rest}
+            ${msgs.map((m, i) => messageHtml(m, i) + (at >= 0 && i === at + 1 ? window.Corrections.renderAnalysis() : '')).join('')}
             ${st.typing ? typingHtml() : ''}
         `;
     }
 
     function errorsChat() {
         const st = S.get();
-        if (!st.messages.errors.length) window.Errors.intro();
+        if (!st.messages.errors.length && !st.seeding) window.Errors.intro();
         return `
             ${st.messages.errors.map((m, i) => messageHtml(m, i)).join('')}
         `;
@@ -94,7 +98,7 @@
 
     function lessonsChat() {
         const st = S.get();
-        if (!st.messages.lessons.length) window.Vocab.intro();
+        if (!st.messages.lessons.length && !st.seeding) window.Vocab.intro();
         return `
             ${st.messages.lessons.map((m, i) => messageHtml(m, i)).join('')}
         `;
@@ -198,7 +202,8 @@
             if (!el) return;
             const st = S.get();
             let html = '';
-            if (st.mode === 'writing') html = writingChat();
+            if (st.view === 'home') html = window.Start.html();
+            else if (st.mode === 'writing') html = writingChat();
             else if (st.mode === 'errors') html = errorsChat();
             else html = lessonsChat();
             el.innerHTML = html;
@@ -206,6 +211,7 @@
         },
 
         renderSideQuery,
+        messageHtml,
 
         scrollToBottom() {
             const scroll = document.getElementById('chat-scroll');
@@ -232,10 +238,10 @@
             const st = S.get();
             const clean = String(text || '').trim();
             if (!clean || st.typing) return;
+            if (st.view === 'home') { window.Start.send(clean); return; }
             if (st.mode === 'errors') { window.Errors.handle(clean); this.scrollToBottom(); return; }
             if (st.mode === 'lessons') { window.Vocab.handle(clean); this.scrollToBottom(); return; }
-            st.messages[st.mode].push({ role: 'user', text: clean });
-            generate(st.mode, clean);
+            window.Writing.handle(clean); this.scrollToBottom();
         },
 
         stop() {

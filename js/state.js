@@ -46,14 +46,23 @@
         errBank: {},                   // errores propios por tipo (tarea 2)
         errPractice: null,             // ronda de práctica en curso
         errRule: '',
-        focusCorrection: null
+        focusCorrection: null,
+        wr: null,                      // revisión de TU correo (tarea 1)
+        wDemoAt: -1,                   // dónde empieza el correo de ejemplo, si se pidió
+        wrDraft: '',
+        wp: null,                      // plan del texto que produces (0.2): tipo, ideas, paso
+        rv: null,                      // revisión de un texto en Revisar (0.3)
+        routeSeed: '',                 // prompt que se lleva a otra tarea
+        lastSeed: '',                  // último prompt con el que se adaptó la vista (para "Cambiar a…")
+        homeMsgs: [],                  // conversación de entrada: ¿a qué tarea voy?
+        homeTyping: false
     };
 
     /* ---------- Guardado en el navegador (que no se pierdan notas ni progreso al recargar) ---------- */
-    const STORE_KEY = 'lingua-ia:v4';
-    const OLD_KEYS = ['lingua-ia:v1', 'lingua-ia:v2', 'lingua-ia:v3'];
+    const STORE_KEY = 'lingua-ia:v6';
+    const OLD_KEYS = ['lingua-ia:v1', 'lingua-ia:v2', 'lingua-ia:v3', 'lingua-ia:v4', 'lingua-ia:v5'];
     const PERSISTED = [
-        'vocab', 'vocabWords', 'sessions', 'statuses', 'inspected', 'messages', 'errBank', 'errPractice', 'errRule',
+        'vocab', 'vocabWords', 'wr', 'wp', 'rv', 'wDemoAt', 'homeMsgs', 'lastSeed', 'view', 'sessions', 'statuses', 'inspected', 'messages', 'errBank', 'errPractice', 'errRule',
         'help', 'version', 'mode', 'activeStage', 'tab', 'branches', 'branch', 'plan', 'criteria',
         'historyMode', 'showTags', 'reduceMotion'
     ];
